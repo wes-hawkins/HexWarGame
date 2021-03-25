@@ -225,7 +225,7 @@ public class HexMath {
 
 	// Generates a mesh for an outline that highlights the given cells, with the origin at the rootTile. 'Thickness' controls
 	//   the thickness, obviously. 'Dilate' pushes in or out of the perimeter of the tile.
-	public static void GetTilesOutline(Mesh targetMesh, Vector2Int[] tiles, float thickness, float dilate){
+	public static void GetTilesOutline(Mesh targetMesh, Vector2Int[] tiles, float thickness, float dilate = 0f){
 		// Grab all edges that don't lead to a neighbor.
 		List<HexEdge> edges = new List<HexEdge>();
 		List<Vector2Int> tileList = new List<Vector2Int>(tiles);
@@ -293,6 +293,7 @@ public class HexMath {
 		targetMesh.SetTriangles(new int[0], 0);
 		targetMesh.SetVertices(verts.ToArray());
 		targetMesh.SetTriangles(tris.ToArray(), 0);
+		targetMesh.RecalculateBounds();
 	} // End of GetTileOutline() method.
 
 	private struct HexEdge {
@@ -307,7 +308,7 @@ public class HexMath {
 
 	// Creates a solid fil within the given tiles. 'Dilate' pushes the fill out or pulls it in from the perimeter.
 	//   If 'contiguous', the fill will stay connected between adjacent cells while dilated.
-	public static void GetTilesFill(Mesh targetMesh, Vector2Int[] tiles, float dilate, bool contiguous){
+	public static void GetTilesFill(Mesh targetMesh, Vector2Int[] tiles, float dilate = 0f, bool contiguous = false){
 		List<Vector3> verts = new List<Vector3>();
 		List<int> tris = new List<int>();
 		List<Vector2Int> tilesList = new List<Vector2Int>(tiles);
@@ -355,6 +356,7 @@ public class HexMath {
 		targetMesh.SetTriangles(new int[0], 0);
 		targetMesh.SetVertices(verts.ToArray());
 		targetMesh.SetTriangles(tris.ToArray(), 0);
+		targetMesh.RecalculateBounds();
 	} // End of GetTilesFill() method.
 
 
@@ -382,7 +384,7 @@ public class HexMath {
 			// First tile (rounded cap)
 			if(t == 0){
 				// Main trunk
-				Vector3 leftSegmentVec = GetVertex(dirToNext - 1) * width;
+				Vector3 leftSegmentVec = GetVertex(dirToNext - 1) * (width / 2f);
 				Vector3 centerLeft = tileCenter + leftSegmentVec;
 				Vector3 centerRight = tileCenter - leftSegmentVec;
 				Vector3 outEdgeLeft = tileCenter + (vecToNext / 2f) + leftSegmentVec;
@@ -417,7 +419,7 @@ public class HexMath {
 			// Last tile (arrow head)
 			} else if(t == (tiles.Length - 1)){
 
-				float arrowSideLengthPercent = Mathf.Clamp(width * 4f, 0f, 1f);
+				float arrowSideLengthPercent = Mathf.Clamp(width * 2f, 0f, 1f);
 
 				// Arrow
 				verts.Add(tileCenter);
@@ -428,7 +430,7 @@ public class HexMath {
 				tris.Add(totalPreviousVerts + 1);
 				tris.Add(totalPreviousVerts + 2);
 
-				Vector3 leftSegmentVec = GetVertex(dirToLast - 1) * width;
+				Vector3 leftSegmentVec = GetVertex(dirToLast - 1) * (width / 2f);
 				Vector3 edgeLeft = tileCenter + (vecToLast / 2f) + leftSegmentVec;
 				Vector3 edgeRight = tileCenter + (vecToLast / 2f) - leftSegmentVec;
 
@@ -471,7 +473,7 @@ public class HexMath {
 				int deltaTurns = DeltaTurns(dirToLast, dirToNext);
 				if(deltaTurns == 3){
 					// Simple rectangle.
-					Vector3 leftSegmentVec = (GetVertex(dirToLast - 1) * width);
+					Vector3 leftSegmentVec = (GetVertex(dirToLast - 1) * (width / 2f));
 					verts.Add(tileCenter + (vecToLast / 2f) + leftSegmentVec); // 0
 					verts.Add(tileCenter + (vecToLast / 2f) - leftSegmentVec); // 1
 					verts.Add(tileCenter + (vecToNext / 2f) + leftSegmentVec); // 2
@@ -502,14 +504,14 @@ public class HexMath {
 
 					if(tightTurn){
 						circleCenter = HexGridToWorld(tiles[t]) + GetVertex(dirToNeighbor + (leftTurn? 0 : 1));
-						innerRadius = (sideL / 2f) - (circumcircleRadius * width);
-						outerRadius = (sideL / 2f) + (circumcircleRadius * width);
+						innerRadius = (sideL / 2f) - (circumcircleRadius * (width / 2f));
+						outerRadius = (sideL / 2f) + (circumcircleRadius * (width / 2f));
 					// Wided turn
 					} else {
 						Vector2Int anchorNeighbor = GetAdjacentCell(tiles[t], dirToNeighbor);
 						circleCenter = HexGridToWorld(anchorNeighbor);
-						innerRadius = circumcircleRadius + ((sideL / 2f) - (circumcircleRadius * width));
-						outerRadius = circumcircleRadius + ((sideL / 2f) + (circumcircleRadius * width));
+						innerRadius = circumcircleRadius + ((sideL / 2f) - (circumcircleRadius * (width / 2f)));
+						outerRadius = circumcircleRadius + ((sideL / 2f) + (circumcircleRadius * (width / 2f)));
 					}
 
 					for(int i = 0; i < (curveSegments * (tightTurn? 2f : 1f)) + 1; i++){
@@ -605,6 +607,7 @@ public class HexMath {
 		targetMesh.SetTriangles(new int[0], 0);
 		targetMesh.SetVertices(verts.ToArray());
 		targetMesh.SetTriangles(tris.ToArray(), 0);
+		targetMesh.RecalculateBounds();
 	} // End of GetGrid().
 
 	/*

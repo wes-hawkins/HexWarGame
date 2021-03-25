@@ -19,6 +19,16 @@ public class InputManager : MonoBehaviour {
 
     private float mouseDragThreshold = 3f;
 
+    // Where on the map the cursor is.
+	public Vector3 CursorMapPosition { get; private set; }
+
+	public HexTile HoveredTile { get; private set; } = null;
+	[SerializeField] private MeshFilter hoveredCellMesh = null;
+	[SerializeField] private MeshFilter selectedUnitMesh = null;
+
+	[SerializeField] private MeshFilter arrowMesh = null; public MeshFilter ArrowMesh { get { return arrowMesh; } }
+
+
 
 
     private void Awake(){
@@ -28,10 +38,16 @@ public class InputManager : MonoBehaviour {
 
     // Main thread
     public async void Init(){
+        arrowMesh.gameObject.SetActive(false);
+        hoveredCellMesh.gameObject.SetActive(false);
+        selectedUnitMesh.gameObject.SetActive(false);
+
         while(true){
 
             // Check for input-interrupting actions here (movement, combat, etc.)
             // ...
+
+            FindHoveredTile();
 
             // Read player input.
             if(Input.GetMouseButton(0) || Input.GetMouseButton(1)){
@@ -55,11 +71,16 @@ public class InputManager : MonoBehaviour {
             
                     // Confirm click (on release)
                     if(!Input.GetMouseButton(mouseButton)){
-                        if(mouseClickable == null)
-                            mouseClickable = GameManager.Inst;
-                        Debug.Log("Clicked on " + ((mouseClickable != null)? mouseClickable.name : "nothing") + ".");
                         if(mouseClickable != null)
-                            mouseClickable.OnClicked(mouseButton);
+                            await mouseClickable.OnClicked(mouseButton);
+                        else{
+			                if(HoveredTile.occupyingUnit != null){
+				                await HoveredTile.occupyingUnit.OnClicked(mouseButton);
+			                } else {
+				                selectedUnitMesh.gameObject.SetActive(false);
+				                Unit.DeselectAll();
+			                }
+                        }
                         break;
                     }
 
@@ -69,36 +90,43 @@ public class InputManager : MonoBehaviour {
 
             await Task.Yield();
         }
-    } // End of Start().
+    } // End of Init().
 
 
-    private struct MouseEvent {
-        public GameObject Object;
-        public MouseEventType EventType;
+    public void FindHoveredTile(){
+        // Find hovered tile
+		Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+		Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+		float rayDist;
+		if(groundPlane.Raycast(mouseRay, out rayDist)){
+			CursorMapPosition = mouseRay.origin + (mouseRay.direction * rayDist);
+			Vector2Int roundedPos = HexMath.WorldToHexGrid(CursorMapPosition);
+			HoveredTile = World.GetTile(roundedPos);
+		}
+    } // End of FindHoveredTile().
 
-        public MouseEvent(GameObject target, MouseEventType eventType){
-            Object = target;
-            EventType = eventType;
-        } // End of constructor.
 
-    } // End of MouseEvent struct.
+	private void Update() {
+        // Animate tiles (away from input thread; this is fine.)
+        if(HoveredTile != null)
+    		HexMath.GetTilesFill(hoveredCellMesh.mesh, new Vector2Int[]{ InputManager.Inst.HoveredTile.GridPos2 }, (GUIConfig.GridOutlineThickness * -0.5f));
+        hoveredCellMesh.gameObject.SetActive(HoveredTile != null);
+
+		// Selected unit outline effect
+		if(Unit.SelectedUnit != null)
+			HexMath.GetTilesOutline(selectedUnitMesh.mesh, new Vector2Int[]{ Unit.SelectedUnit.GridPos2 }, 0.15f + (Mathf.Cos(Time.time * Mathf.PI * 2f) * 0.05f), 0.035f);
+		selectedUnitMesh.gameObject.SetActive(Unit.SelectedUnit != null);
+
+	} // End of Update().
 
 } // End of InputManager class.
 
 
-public enum MouseEventType {
-    click,
-    beginDrag,
-    drag,
-    endDrag,
-}
-
-
-
 public interface IMouseClickable {
     string name { get; }
-    void OnClicked(int mouseButton);
+    Task OnClicked(int mouseButton);
 } // End of IMouseClickable interface.
+
 
 public interface IMouseDraggable {
     string name { get; }

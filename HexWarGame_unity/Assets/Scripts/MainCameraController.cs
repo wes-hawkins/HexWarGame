@@ -23,8 +23,7 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
         private float easing = 0.1f;
 
         private float eulersRate = 3f;
-        //private Vector2 eulers = new Vector2(45f, 0f);
-        private Vector2 eulers = new Vector2(88, 0f);
+        private Vector2 eulers = new Vector2(45f, 20f);
         private Vector2 targetEulers;
         private Vector2 eulersVel = Vector2.zero;
         float minTilt = 20;
@@ -82,7 +81,7 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
 
             float initialTargetZoomDist = targetZoomDist;
             // Scoot view towards/away from cursor position while zooming to maintain cursor map position.
-            targetFocusPosition = Vector3.MoveTowards(targetFocusPosition, GameManager.Inst.CursorMapPosition, -Vector3.Distance(targetFocusPosition, GameManager.Inst.CursorMapPosition) * (zoomDistDelta / targetZoomDist));
+            targetFocusPosition = Vector3.MoveTowards(targetFocusPosition, InputManager.Inst.CursorMapPosition, -Vector3.Distance(targetFocusPosition, InputManager.Inst.CursorMapPosition) * (zoomDistDelta / targetZoomDist));
 
             targetZoomDist = Mathf.Clamp(targetZoomDist + zoomDistDelta, minZoomDist, maxZoomDist);
             zoomDist = Mathf.SmoothDamp(zoomDist, targetZoomDist, ref zoomDistVel, easing);
@@ -102,7 +101,7 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
         } // End of Drag().
 
         private async Task DragSlew(){
-		    Vector3 cameraLocalCursorStart = Camera.main.transform.InverseTransformPoint(GameManager.Inst.CursorMapPosition);
+		    Vector3 cameraLocalCursorStart = Camera.main.transform.InverseTransformPoint(InputManager.Inst.CursorMapPosition);
 		    Vector3 cameraLocalUpNormal = Camera.main.transform.InverseTransformVector(Vector3.up);
             Vector3 initialTargetPosition = focusPosition;
 		    Vector3 lastMousePosition = Vector2.zero;

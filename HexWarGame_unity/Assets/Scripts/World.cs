@@ -70,8 +70,8 @@ public class World : MonoBehaviour {
 		for(int i = 0; i < hexTileCount; i++)
 			allTiles[i] = potentialallTiles[i];
 
-		HexMath.GetGrid(physicalGroundGridMesh.mesh, mapRadius, 0.035f);
-		HexMath.GetGrid(virtualGroundGridMesh.mesh, mapRadius, 0.035f);
+		HexMath.GetGrid(physicalGroundGridMesh.mesh, mapRadius, GUIConfig.GridOutlineThickness);
+		virtualGroundGridMesh.mesh = physicalGroundGridMesh.mesh;
 
 		RebuildTerrain();
 	} // End of Start().
@@ -81,13 +81,17 @@ public class World : MonoBehaviour {
 	public void RebuildTerrain(){
 		RebuildTerrain(Vector2.zero, Terrain.activeTerrain.terrainData.size.ToMap2D());
 	}
+	// Rebuilds a single hex.
+	public void RebuildTerrain(HexTile hexTile){
+		RebuildTerrain(HexMath.HexGridToWorld(hexTile.GridPos2).ToMap2D(), Vector2.one * 1.5f);
+	}
 	// Rebuilds a path of terrain.
 	public void RebuildTerrain(Vector2 center, Vector2 size){
 
 		// The terrain sits at the ocean depth height, and raises up to create terrain.
 		Terrain terr = Terrain.activeTerrain;
-		terr.transform.position = new Vector3(-terr.terrainData.size.x / 2f, TerrainConfig.OceanDepth, -terr.terrainData.size.z / 2f);
-		terr.terrainData.size = new Vector3(50f, TerrainConfig.MountainHeight - TerrainConfig.OceanDepth, 50f);
+		terr.transform.position = new Vector3(-terr.terrainData.size.x / 2f, TerrainConfig.OceanFloor, -terr.terrainData.size.z / 2f);
+		terr.terrainData.size = new Vector3(50f, TerrainConfig.MountainHeight - TerrainConfig.OceanFloor, 50f);
 
 		//float terrainResolution = terr.terrainData.heightmapResolution / terr.terrainData.size.x; // heightmap-units per world-unit
 		Vector2 centerTerrainLocalPos = center - terr.transform.position.ToMap2D(); // center position relative to heightmap
@@ -96,10 +100,6 @@ public class World : MonoBehaviour {
 		// Now in heightmap units
 		Vector2 patchCenter = new Vector2(centerNormalized.x * terr.terrainData.heightmapResolution, centerNormalized.y * terr.terrainData.heightmapResolution);
 		Vector2 patchSize = new Vector2(size.x / terr.terrainData.size.x, size.y / terr.terrainData.size.z) * terr.terrainData.heightmapResolution;
-
-		Debug.Log("patchCenter: " + patchCenter);
-		Debug.Log("patchSize: " + patchSize);
-		Debug.Log("heightmapResolution: " + terr.terrainData.heightmapResolution);
 
 		Vector2Int patchStartCorner = new Vector2Int(
 			Mathf.Clamp(Mathf.RoundToInt(patchCenter.x - (patchSize.x / 2f)), 0, terr.terrainData.heightmapResolution),
@@ -154,7 +154,7 @@ public class World : MonoBehaviour {
 				// If we aren't on a tile, zero it out.
 				HexTile myTile = GetTile(myCell);
 				if(myTile == null){
-					targetHeight = TerrainConfig.OceanDepth;
+					targetHeight = TerrainConfig.OceanFloor;
 
 				// Use this block for just raw tiles without blending.
 				/*} else {
@@ -205,7 +205,7 @@ public class World : MonoBehaviour {
 						targetAlphamaps[i] /= totalAlphamapInfluence;
 				}
 				
-				heights[y - patchStartCorner.y, x - patchStartCorner.x] = Mathf.InverseLerp(TerrainConfig.OceanDepth, TerrainConfig.MountainHeight, targetHeight);
+				heights[y - patchStartCorner.y, x - patchStartCorner.x] = Mathf.InverseLerp(TerrainConfig.OceanFloor, TerrainConfig.MountainHeight, targetHeight);
 
 				// Alphamap
 				if(x < terr.terrainData.alphamapResolution && y < terr.terrainData.alphamapResolution){
@@ -223,13 +223,6 @@ public class World : MonoBehaviour {
 		//terr.heightmapMaximumLOD = 0; // Effectively prevents terrain from showing lower LODs.
 
 	} // End of RebuildTerrain().
-
-
-
-	private void Update() {
-		HexMath.HexagonSpaceDistance(GameManager.Inst.CursorMapPosition.ToMap2D());
-	} // End of Update().
-
 
 
 	private class HexTilePathingData {
@@ -250,7 +243,7 @@ public class World : MonoBehaviour {
 	// TODO: Limit search by maximum number of tiles the unit can move. Only sample the hexes within
 	//   the Vancouver distance to the startTile. Should still be able to go after a goalTile that is
 	//   outside of the possible distance, but it will 'stop short.'
-	public static HexTile[] FindPath(HexTile startTile, HexTile goalTile, CancellationToken ct){
+	public static Vector2Int[] FindPath(HexTile startTile, HexTile goalTile, Unit unit, CancellationToken ct){
 		// Create pathfinding data for all tiles.
 		Dictionary<HexTile, HexTilePathingData> data = new Dictionary<HexTile, HexTilePathingData>();
 		foreach(HexTile tile in allTiles)
@@ -284,7 +277,7 @@ public class World : MonoBehaviour {
 				HexTile[] adjacentTiles = currentTile.GetAdjacentTiles();
 				foreach(HexTile adjacentTile in adjacentTiles){
 					// Get neighbors
-					if(adjacentTile.Navigable){
+					if(adjacentTile.GetIsNavigable(unit.mapLayer, unit)){
 						// The heuristic 'coaxes' the result a certain way. Allows algorithm to choose between multiple
 						//   'optimal' paths, e.g. the 'straightest path' (even if a diagonal path is just as efficient.)
 						//   Make sure the heuristic is much smaller than the value of a whole cell.
@@ -293,13 +286,13 @@ public class World : MonoBehaviour {
 							data[adjacentTile].isOpen = true;
 							data[adjacentTile].parentHex = currentTile;
 						
-							data[adjacentTile].gScore = data[currentTile].gScore + adjacentTile.moveCost;
+							data[adjacentTile].gScore = data[currentTile].gScore + unit.GetMoveCost(adjacentTile);
 							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2);
 							data[adjacentTile].fScore = data[adjacentTile].gScore + heuristic;
 						}else if(data[adjacentTile].isOpen && (data[adjacentTile].gScore < data[currentTile].gScore)){
 							data[adjacentTile].parentHex = currentTile;
 						
-							data[adjacentTile].gScore = data[currentTile].gScore + adjacentTile.moveCost;
+							data[adjacentTile].gScore = data[currentTile].gScore + unit.GetMoveCost(adjacentTile);
 							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2);
 							data[adjacentTile].fScore = data[adjacentTile].gScore + heuristic;
 						}
@@ -309,12 +302,12 @@ public class World : MonoBehaviour {
 				// If node is goal, break with success
 				if(currentTile == goalTile){
 					HexTile currentTraceHex = goalTile;
-					List<HexTile> path = new List<HexTile>();
+					List<Vector2Int> path = new List<Vector2Int>();
 					while(currentTraceHex != startTile){
-						path.Add(currentTraceHex);
+						path.Add(currentTraceHex.GridPos2);
 						currentTraceHex = data[currentTraceHex].parentHex;
 					}
-					path.Add(startTile);
+					path.Add(startTile.GridPos2);
 
 					path.Reverse();
 					return path.ToArray();

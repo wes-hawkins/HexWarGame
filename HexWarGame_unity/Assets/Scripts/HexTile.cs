@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 
 public class HexTile {
@@ -11,29 +12,28 @@ public class HexTile {
 
 	public Vector3 WorldPos { get { return HexMath.HexGridToWorld(GridPos2); } }
 
-	public bool Navigable { get; private set; }
-	public float moveCost = 1f;
-
 	public Unit occupyingUnit { get; private set; } = null;
 	public void SetOccupyingUnit(Unit unit){ occupyingUnit = unit; }
 
+	public Action TerrainTypeUpdated;
+
 	public TerrainType TerrainType { get; private set; }
 	public void SetTerrainType(TerrainType newType){
-		TerrainType = newType;
+		if(TerrainType != newType){
+			TerrainType = newType;
+			TerrainTypeUpdated?.Invoke();
+			World.Inst.RebuildTerrain(this);
+		}
 	} // End of SetTerrainType().
 
 
 	public HexTile(Vector2Int pos){
 		GridPos2 = pos;
 		z = pos.x + pos.y;
-		Navigable = Random.Range(0f, 1f) > 0.4f;
-		//Navigable = true;
-
-		//TerrainType = (TerrainType)Random.Range(0, System.Enum.GetValues(typeof(TerrainType)).Length);
 
 		int distFromCenter = HexMath.VancouverDist(Vector2Int.zero, GridPos2);
 		int numTerrainTypes = System.Enum.GetValues(typeof(TerrainType)).Length - 1;
-		TerrainType = (TerrainType)Mathf.Clamp(numTerrainTypes - (distFromCenter / 3) + ((Random.Range(0f, 1f) < 0.2f)? Random.Range(-1, 1) : 0), 0, numTerrainTypes);
+		TerrainType = (TerrainType)Mathf.Clamp(numTerrainTypes - (distFromCenter / 3), 0, numTerrainTypes);
 
 	} // End of constructor.
 
@@ -62,8 +62,8 @@ public class HexTile {
 		// Apply influence of each tile.
 		float targetHeight = 0f;
 		switch(TerrainType){
-			case TerrainType.oceanFloor: 
-				targetHeight = TerrainConfig.OceanDepth;
+			case TerrainType.deepWater: 
+				targetHeight = TerrainConfig.OceanFloor;
 				break;
 			case TerrainType.shallowWater: 
 				targetHeight = TerrainConfig.ShallowsDepth; 
@@ -116,11 +116,81 @@ public class HexTile {
 		return alphaMaps;
 	} // End of GetAlphamap() method.
 
+
+	// Returns false if the unit can't occupy the tile.
+	public bool GetIsNavigable(MapLayer mapLayer, Unit unit){
+		return GetIsNavigable(mapLayer, unit, out float dummy);
+	}
+	public bool GetIsNavigable(MapLayer mapLayer, Unit unit, out float height){
+		switch(mapLayer){
+
+			case MapLayer.subnautical:
+				height = TerrainConfig.OceanFloor;
+				return true;
+
+			case MapLayer.surface:
+				switch(TerrainType){
+					case TerrainType.openGround:
+						if(unit.Definition.CanTraverseOpenGround){
+							height = 0f;
+							return true;
+						}
+						break;
+
+					case TerrainType.mountains:
+						if(unit.Definition.CanTraverseMountains){
+							height = TerrainConfig.MountainUnitHeight;
+							return true;
+						}
+						break;
+
+					case TerrainType.shallowWater:
+						if(unit.Definition.CanFloatShallowSurface){
+							height = TerrainConfig.SeaLevel;
+							return true;
+						} else if(unit.Definition.CanTraverseShallowBed){
+							height = TerrainConfig.ShallowsDepth;
+							return true;
+						}
+						break;
+
+					case TerrainType.deepWater:
+						if(unit.Definition.CanFloatDeepSurface){
+							height = TerrainConfig.SeaLevel;
+							return true;
+						}
+						break;
+				}
+				break;
+
+			case MapLayer.lowAltitude:
+				height = TerrainConfig.LowAltitude;
+				return true;
+
+			case MapLayer.highAlitude:
+				height = TerrainConfig.HighAltitude;
+				return true;
+		}
+
+		height = 0f;
+		return false;
+	} // End of GetUnitHeight().
+
 } // End of HexTile class.
 
 
+
+// The 'stack' of 2D maps that all units move on.
+public enum MapLayer {
+	subnautical, // submarines
+	surface, // most land and naval units
+	lowAltitude, // helicopters, low-flying aircraft
+	highAlitude, // fighters, other fixed-wing aircraft
+}
+
+
 public enum TerrainType {
-	oceanFloor,
+	deepWater,
 	shallowWater,
 	//beach,
 	openGround,
