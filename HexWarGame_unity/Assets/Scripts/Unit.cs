@@ -29,11 +29,15 @@ public class Unit : MonoBehaviour, IMouseClickable {
 	public static List<Unit> invalidUnits = new List<Unit>();
 
 
-	public static void StaticUpdate(){
-		foreach(Unit unit in invalidUnits){
-			unit.SetRecolor(new Color(0.8f, 0f, 0f, 0.5f + (Mathf.Cos(Mathf.PI * Time.time * 4f) * 0.5f)));
+	public static async void MainLoop(CancellationToken ct){
+		while(!ct.IsCancellationRequested){
+			foreach(Unit unit in invalidUnits){
+				unit.SetRecolor(new Color(0.8f, 0f, 0f, 0.5f + (Mathf.Cos(Mathf.PI * Time.time * 4f) * 0.5f)));
+			}
+
+			await Task.Yield();
 		}
-	} // End of StaticUpdate().
+	} // End of MainLoop().
 
 
 
@@ -64,7 +68,6 @@ public class Unit : MonoBehaviour, IMouseClickable {
 
 	public async Task OnClicked(int mouseButton){
 		Select();
-		Debug.Log("Unit clicked... " + mouseButton);
 		// On right click...
 		if(mouseButton == 1){
 			HexTile lastHoveredTile = null;
@@ -110,7 +113,6 @@ public class Unit : MonoBehaviour, IMouseClickable {
 
 	private void UpdateHeight(){
 		float height;
-		Debug.Log(occupiedTile.TerrainType);
 		if(occupiedTile.GetIsNavigable(mapLayer, this, out height)){
 			transform.position = occupiedTile.WorldPos + (Vector3.up * height);
 			SetInvalid(false);

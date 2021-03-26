@@ -17,19 +17,6 @@ public class World : MonoBehaviour {
 		return null;
 	} // End of GetTile().
 
-	[SerializeField] private GameObject hexTilePrefab = null;
-	private static Dictionary<HexTile, GameObject> visualizations = new Dictionary<HexTile, GameObject>();
-	public static GameObject GetVisualization(HexTile tile){
-		return visualizations[tile];
-	} // End of GetVisualization().
-
-	private bool showAxes = true;
-
-	private HexTile findPath_startHex = null;
-	private HexTile findPath_goalHex = null;
-	private HexTile[] findPath_thePath = null;
-	private bool findPath_new = false;
-
 	[SerializeField] private MeshFilter physicalGroundGridMesh = null;
 	[SerializeField] private MeshFilter virtualGroundGridMesh = null;
 
@@ -41,14 +28,7 @@ public class World : MonoBehaviour {
 
 
 	public void Init(){
-		// Clear old data in case of reset.
-		findPath_startHex = null;
-		findPath_goalHex = null;
-		findPath_thePath = new HexTile[0];
-		findPath_new = false;
-	
 		// Generate maps
-		// Temporary container to fill with tiles... will be cropped into allTiles.
 		HexTile[] potentialallTiles = new HexTile[HexMath.VancouverArea(mapRadius)];
 		int hexTileCount = 0;
 		for(int x = -mapRadius; x <= mapRadius; x++){
@@ -75,6 +55,7 @@ public class World : MonoBehaviour {
 
 		RebuildTerrain();
 	} // End of Start().
+
 
 
 	// Rebuilds the entire terrain.
@@ -117,7 +98,7 @@ public class World : MonoBehaviour {
 		float influencePerlinRate = 1f; // how rapid the jiggle is.
 		float influencePerlinIntensity = 0.2f; // how intense the jiggle is.
 
-		// TODO: Separate heightmap and alphamap passes, such that alphamap calcs can source from final heightmap?
+		// TODO: Address slight alphamap offset (vs. heightmap)
 
 		float[,] heights = new float[patchRealSize.y, patchRealSize.x];
 
@@ -223,6 +204,22 @@ public class World : MonoBehaviour {
 		//terr.heightmapMaximumLOD = 0; // Effectively prevents terrain from showing lower LODs.
 
 	} // End of RebuildTerrain().
+
+
+	public void DoEditTile(){
+		// Terrain editing
+		if(InputManager.Inst.HoveredTile != null){
+			if(Input.GetKey(KeyCode.Alpha1))
+				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.deepWater);
+			else if(Input.GetKey(KeyCode.Alpha2))
+				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.shallowWater);
+			else if(Input.GetKey(KeyCode.Alpha3))
+				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.openGround);
+			else if(Input.GetKey(KeyCode.Alpha4))
+				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.mountains);
+		}
+	} // End of DoEditTile().
+
 
 
 	private class HexTilePathingData {

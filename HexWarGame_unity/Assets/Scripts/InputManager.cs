@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Threading;
 
 public class InputManager : MonoBehaviour {
 
@@ -33,21 +34,22 @@ public class InputManager : MonoBehaviour {
 
     private void Awake(){
         Inst = this;
+
+        arrowMesh.gameObject.SetActive(false);
+        hoveredCellMesh.gameObject.SetActive(false);
+        selectedUnitMesh.gameObject.SetActive(false);
     } // End of Start() method.
 
 
     // Main thread
-    public async void Init(){
-        arrowMesh.gameObject.SetActive(false);
-        hoveredCellMesh.gameObject.SetActive(false);
-        selectedUnitMesh.gameObject.SetActive(false);
-
-        while(true){
-
+    public async void MainLoop(CancellationToken ct){
+        while(!ct.IsCancellationRequested){
             // Check for input-interrupting actions here (movement, combat, etc.)
             // ...
 
             FindHoveredTile();
+
+            World.Inst.DoEditTile();
 
             // Read player input.
             if(Input.GetMouseButton(0) || Input.GetMouseButton(1)){

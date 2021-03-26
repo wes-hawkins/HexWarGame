@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Threading;
 
 public class MainCameraController : MonoBehaviour, IMouseDraggable {
 
@@ -137,11 +138,15 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
 	} // End of Awake().
 
 
-	public void Frame(){
-        strategicCamera.Frame();
-        transform.position = strategicCamera.CameraPosition;
-        transform.rotation = strategicCamera.CameraRotation;
-    } // End of ManualUpdate() method.
+	public async void MainLoop(CancellationToken ct){
+        while(!ct.IsCancellationRequested){
+            strategicCamera.Frame();
+            transform.position = strategicCamera.CameraPosition;
+            transform.rotation = strategicCamera.CameraRotation;
+
+            await Task.Yield();
+        }
+    } // End of MainLoop() method.
 
 
 
