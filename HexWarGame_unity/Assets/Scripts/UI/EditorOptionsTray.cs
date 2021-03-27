@@ -22,12 +22,27 @@ public class EditorOptionsTray : MonoBehaviour {
     [SerializeField] private float withScrollWidth = 134f; // How wide the options tray is with scrollbar enabled.
 
 
+    // 0 = terrain, 1 = structures, 2 = units
+    private int selectedCategory = 0;
+    private int[] selectedOption = new int[3]; // Keep track of selected option in each list.
+    private List<OptionTrayItem>[] optionLists = new List<OptionTrayItem>[3];
+
+    [Space]
+    [SerializeField] private Material normalTextMaterial = null; public Material NormalTextMaterial { get { return normalTextMaterial; } }
+    [SerializeField] private Material selectedTextMaterial = null; public Material SelectedTextMaterial { get { return selectedTextMaterial; } }
+
+
 	private void Awake() {
         Inst = this;
         rectTransform = GetComponent<RectTransform>();
 
         scrollbarEnableDisable.OnEnabled += SetWidthWithScrollbar;
         scrollbarEnableDisable.OnDisabled += SetWidthWithScrollbar;
+
+        foreach(int i in selectedOption){
+            selectedOption[i] = -1; // -1 indicated nothing selected.
+            optionLists[i] = new List<OptionTrayItem>();
+        }
     } // End of Awake().
 
 
@@ -44,9 +59,15 @@ public class EditorOptionsTray : MonoBehaviour {
         unitsOptionsContainer.name = "Group: Units";
 
         // Set up terrain options
-        foreach(TerrainConfig.TerrainTypeUIData terrainData in TerrainConfig.Inst.TerrainData){
+        for(int i = 0; i < TerrainConfig.Inst.TerrainData.Length; i++){
+            TerrainConfig.TerrainTypeUIData terrainData = TerrainConfig.Inst.TerrainData[i];
+
             OptionTrayItem newItem = Instantiate(optionTrayItemSource, terrainOptionsContainer).GetComponent<OptionTrayItem>();
             newItem.Init(terrainData.Name, terrainData.Sprite);
+            optionLists[0].Add(newItem);
+            int j = i;
+            newItem.Button.onClick.AddListener(delegate{ OptionSelected(0, j); });
+            Debug.Log("Button set up " + j);
         }
 
         // Set up structure options
@@ -66,5 +87,20 @@ public class EditorOptionsTray : MonoBehaviour {
         rectTransform.sizeDelta = new Vector2(scrollbarEnableDisable.gameObject.activeSelf? withScrollWidth : noScrollWidth, 0f);
         rectTransform.sizeDelta = new Vector2(scrollbarEnableDisable.gameObject.activeSelf? withScrollWidth : noScrollWidth, 0f);
     } // End of SetWidthWithScrollbar().
+
+
+    private void OptionSelected(int category, int optionNum){
+        Debug.Log("OptionSelected(" + category + ", " + optionNum + ")");
+
+        // Clear existing selection.
+        int previousOption = selectedOption[selectedCategory];
+        if(previousOption != -1)
+            optionLists[selectedCategory][previousOption].Deselect();
+
+        selectedCategory = category;
+        selectedOption[category] = optionNum;
+        optionLists[category][optionNum].Select();
+
+    } // End of OptionSelected().
 
 } // End of EditorOptionsTray class.
