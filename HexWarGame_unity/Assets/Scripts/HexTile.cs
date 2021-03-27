@@ -71,7 +71,7 @@ public class HexTile {
 			//case TerrainType.beach: 
 				//targetHeight = TerrainConfig.BeachDepth; 
 				//break;
-			case TerrainType.openGround: 
+			case TerrainType.openGrass: 
 				targetHeight = 0f; 
 				break;
 			//case TerrainType.lowHills: 
@@ -96,7 +96,7 @@ public class HexTile {
 		// 4 = Shallows
 
 		switch(TerrainType){
-			case TerrainType.openGround:
+			case TerrainType.openGrass:
 				alphaMaps[0] = 1f;
 				break;
 			case TerrainType.shallowWater:
@@ -130,7 +130,7 @@ public class HexTile {
 
 			case MapLayer.surface:
 				switch(TerrainType){
-					case TerrainType.openGround:
+					case TerrainType.openGrass:
 						if(unit.Definition.CanTraverseOpenGround){
 							height = 0f;
 							return true;
@@ -193,7 +193,7 @@ public enum TerrainType {
 	deepWater,
 	shallowWater,
 	//beach,
-	openGround,
+	openGrass,
 	//lowHills,
 	mountains,
 } // End of TerrainType enum.

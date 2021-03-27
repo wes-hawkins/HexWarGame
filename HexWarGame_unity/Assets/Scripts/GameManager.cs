@@ -33,6 +33,7 @@ public class GameManager : MonoBehaviour {
 		guiConfig.Init();
 		tileBlendingMap.Init();
 		World.Inst.Init();
+		EditorOptionsTray.Inst.ManualStart();
 
 		foreach(Unit unit in Unit.GetAllUnits)
 			unit.ManualStart();

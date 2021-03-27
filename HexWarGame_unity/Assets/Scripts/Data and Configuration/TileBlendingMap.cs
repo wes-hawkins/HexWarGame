@@ -9,7 +9,7 @@ public class TileBlendingMap : SingletonScriptableObject<TileBlendingMap> {
 	[System.Serializable]
 	public class TileBlendingData {
 
-		[SerializeField] private TerrainType fromType = TerrainType.openGround; public TerrainType FromType { get { return fromType; } }
+		[SerializeField] private TerrainType fromType = TerrainType.openGrass; public TerrainType FromType { get { return fromType; } }
 		
 		[SerializeField] private AnimationCurve heightmapBlend = new AnimationCurve(); public AnimationCurve HeightmapBlend { get { return heightmapBlend; } }
 		[SerializeField] private AnimationCurve alphamapBlend = new AnimationCurve(); public AnimationCurve AlphamapBlend { get { return alphamapBlend; } }

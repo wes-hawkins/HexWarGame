@@ -214,7 +214,7 @@ public class World : MonoBehaviour {
 			else if(Input.GetKey(KeyCode.Alpha2))
 				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.shallowWater);
 			else if(Input.GetKey(KeyCode.Alpha3))
-				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.openGround);
+				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.openGrass);
 			else if(Input.GetKey(KeyCode.Alpha4))
 				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.mountains);
 		}

@@ -52,7 +52,7 @@ public class InputManager : MonoBehaviour {
             World.Inst.DoEditTile();
 
             // Read player input.
-            if(Input.GetMouseButton(0) || Input.GetMouseButton(1)){
+            if(!UIPointerMinder.HoveredElement && (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))){
                 int mouseButton = 0;
                 if(Input.GetMouseButton(1))
                     mouseButton = 1;
@@ -97,14 +97,18 @@ public class InputManager : MonoBehaviour {
 
     public void FindHoveredTile(){
         // Find hovered tile
-		Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
-		Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-		float rayDist;
-		if(groundPlane.Raycast(mouseRay, out rayDist)){
-			CursorMapPosition = mouseRay.origin + (mouseRay.direction * rayDist);
-			Vector2Int roundedPos = HexMath.WorldToHexGrid(CursorMapPosition);
-			HoveredTile = World.GetTile(roundedPos);
-		}
+        if(!UIPointerMinder.HoveredElement){
+		    Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+		    Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+		    float rayDist;
+		    if(groundPlane.Raycast(mouseRay, out rayDist)){
+			    CursorMapPosition = mouseRay.origin + (mouseRay.direction * rayDist);
+			    Vector2Int roundedPos = HexMath.WorldToHexGrid(CursorMapPosition);
+			    HoveredTile = World.GetTile(roundedPos);
+		    }
+        } else {
+            HoveredTile = null;
+        }
     } // End of FindHoveredTile().
 
 
