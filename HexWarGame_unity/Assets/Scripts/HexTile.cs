@@ -18,11 +18,12 @@ public class HexTile {
 	public Action TerrainTypeUpdated;
 
 	public TerrainType TerrainType { get; private set; }
-	public void SetTerrainType(TerrainType newType){
+	public void SetTerrainType(TerrainType newType, bool updateTerrain){
 		if(TerrainType != newType){
 			TerrainType = newType;
 			TerrainTypeUpdated?.Invoke();
-			World.Inst.RebuildTerrain(this);
+			if(updateTerrain)
+				World.Inst.RebuildTerrain(this);
 		}
 	} // End of SetTerrainType().
 
@@ -176,7 +177,24 @@ public class HexTile {
 		return false;
 	} // End of GetUnitHeight().
 
+
+	public SerializableTileInfo GetSerializableTileInfo(){
+		return new SerializableTileInfo(TerrainType);
+	} // End of GetSerializableTileInfo() method.
+
 } // End of HexTile class.
+
+
+
+[System.Serializable]
+public struct SerializableTileInfo {
+	public TerrainType TerrainType;
+
+	public SerializableTileInfo(TerrainType terrainType){
+		TerrainType = terrainType;
+	} // End of constructor.
+
+} // End of SerializableTileInfo struct.
 
 
 

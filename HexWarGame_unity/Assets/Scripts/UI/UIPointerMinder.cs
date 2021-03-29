@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 public class UIPointerMinder : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler {
     
     public static UIPointerMinder HoveredElement { get; private set; }
+    public bool IsHoveredElement { get { return HoveredElement == this; } }
 
 
     public void OnPointerEnter(PointerEventData data){
@@ -19,5 +20,11 @@ public class UIPointerMinder : MonoBehaviour, IPointerEnterHandler, IPointerExit
         if(HoveredElement == this)
             HoveredElement = null;
     } // End of IPointerEnter().
+
+
+	private void OnDisable() {
+		if(IsHoveredElement)
+            HoveredElement = null;
+	} // End of OnDisable() method.
 
 } // End of UIPointerMinder class.

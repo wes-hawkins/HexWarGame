@@ -9,6 +9,7 @@ public class World : MonoBehaviour {
 	public static World Inst { get; private set; }
 
 	public static int mapRadius { get; private set; } = 20;
+
 	public static HexTile[] allTiles { get; private set; } // Straight list of all hexes in the world.
 	private static Dictionary<Vector2Int, HexTile> tileMap = new Dictionary<Vector2Int, HexTile>(); // 2D map of all hexes.
 	public static HexTile GetTile(Vector2Int pos){
@@ -56,6 +57,29 @@ public class World : MonoBehaviour {
 		RebuildTerrain();
 	} // End of Start().
 
+
+
+	public void LoadMap(SerializableTileInfo[] map){
+		tileMap.Clear();
+		for(mapRadius = 0; mapRadius < 50; mapRadius++){
+			if(HexMath.VancouverArea(mapRadius) == map.Length){
+				Vector2Int[] vancSquare = HexMath.GetVancouverSquare(Vector2Int.zero, World.mapRadius);
+				allTiles = new HexTile[map.Length];
+
+				for(int i = 0; i < map.Length; i++){
+					HexTile newTile = new HexTile(vancSquare[i]);
+					newTile.SetTerrainType(map[i].TerrainType, false);
+					allTiles[i] = newTile;
+					tileMap.Add(vancSquare[i], newTile);
+				}
+
+				RebuildTerrain();
+				break;
+			}
+		}
+
+		
+	} // End of LoadMap().
 
 
 	// Rebuilds the entire terrain.

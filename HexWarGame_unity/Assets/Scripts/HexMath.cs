@@ -68,6 +68,7 @@ public class HexMath {
 
 	// Returns the total number of hexes within a certain range of a hex (including that hex).
 	// Note: a single hex has a "radius" of 0.
+	// Brute force... might be able to optimize, but probably trivial.
 	public static int VancouverArea(int radius){
 		int result = 1;
 		for(int i = 0; i <= radius; i++)

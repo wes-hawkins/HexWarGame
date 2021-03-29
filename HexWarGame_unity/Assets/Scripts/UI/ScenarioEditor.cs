@@ -124,7 +124,7 @@ public class ScenarioEditor : MonoBehaviour {
 					foreach(Vector2Int cell in tilesToPaint){
 						HexTile tile = World.GetTile(cell);
 						if(tile != null){
-							tile.SetTerrainType(EditorOptionsTray.Inst.SelectedTerrainType);
+							tile.SetTerrainType(EditorOptionsTray.Inst.SelectedTerrainType, true);
 						}
 					}
 					// TODO: Cache changing tiles together, then run a single update pass on the terrain to avoid unnecessary terrain updates.

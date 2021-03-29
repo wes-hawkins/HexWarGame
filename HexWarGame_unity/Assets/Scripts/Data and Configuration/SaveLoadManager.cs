@@ -49,7 +49,7 @@ public class SaveLoadManager : MonoBehaviour {
 		directoryEntrySource.SetActive(false);
 		fileEntrySource.SetActive(false);
 
-		gameObject.SetActive(false);
+		fileBrowserWindow.SetActive(false);
 	} // End of ManualStart() method.
 
 
@@ -146,7 +146,17 @@ public class SaveLoadManager : MonoBehaviour {
 		// Generate save data
 		SaveGlob saveGlob = new SaveGlob();
 
-		// Set save glob stuff here...
+		saveGlob.scenarioName = saveName;
+
+		// Save map
+		Vector2Int[] vancSquare = HexMath.GetVancouverSquare(Vector2Int.zero, World.mapRadius);
+		saveGlob.map = new SerializableTileInfo[vancSquare.Length];
+		for(int i = 0; i < saveGlob.map.Length; i++)
+			saveGlob.map[i] = new SerializableTileInfo(World.GetTile(vancSquare[i]).TerrainType);
+
+		Debug.Log("Saved map with " + saveGlob.map.Length + " tiles.");
+
+		// Add save glob stuff here...
 		// ...
 
 		BinaryFormatter bf = new BinaryFormatter();
@@ -157,7 +167,7 @@ public class SaveLoadManager : MonoBehaviour {
 		bf.Serialize(file, saveGlob);
 		file.Close();
 
-		Debug.Log("Saved " + saveGlob.ScenarioName + " to \"" + SaveFilePath(saveName) + "\".");
+		Debug.Log("Saved " + saveGlob.scenarioName + " to \"" + SaveFilePath(saveName) + "\".");
 		currentWorkingTitle = saveName;
 		Close();
 
@@ -177,7 +187,15 @@ public class SaveLoadManager : MonoBehaviour {
 			FileStream file = File.Open(SaveFilePath(saveName), FileMode.Open);
 			SaveGlob saveGlob = (SaveGlob)bf.Deserialize(file);
 
-			Debug.Log("Loaded " + saveGlob.ScenarioName + ".");
+			// Load map
+			World.Inst.LoadMap(saveGlob.map);
+			Debug.Log("Loaded map with " + saveGlob.map.Length + " tiles.");
+
+
+			// Load save glob stuff here...
+			// ...
+
+			Debug.Log("Loaded " + saveGlob.scenarioName + ".");
 			currentWorkingTitle = saveName;
 
 			Close();
@@ -220,7 +238,8 @@ public class SaveLoadManager : MonoBehaviour {
 
 	[System.Serializable]
 	public class SaveGlob {
-		internal string scenarioName = "New Scenario"; public string ScenarioName { get { return scenarioName; } }
+		internal SerializableTileInfo[] map;
+		internal string scenarioName;
 	} // End of SaveGlob.
 
 } // End of SaveLoadManager().

@@ -44,7 +44,6 @@ public class GameManager : MonoBehaviour {
 		foreach(Unit unit in Unit.GetAllUnits)
 			unit.ManualStart();
 
-
 		// Main thread
 		Debug.Log("Starting main thread...");
 		InputManager.Inst.MainLoop(cts.Token);
@@ -68,6 +67,7 @@ public class GameManager : MonoBehaviour {
 
 
 	public void Button_Quit(){
+		cts.Cancel();
 		Application.Quit();
 	} // End of Button_Quit().
 
