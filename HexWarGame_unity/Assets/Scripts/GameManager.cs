@@ -1,6 +1,8 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System;
 using System.Threading;
 
 public class GameManager : MonoBehaviour {
@@ -17,10 +19,11 @@ public class GameManager : MonoBehaviour {
 
 	public static bool busy = false;
 	public static bool ready = true;
-	private int busyCooldown;
 
 	CancellationTokenSource cts = new CancellationTokenSource();
 
+	public GameMode GameMode { get; private set; } = GameMode.edit;
+	public Action<GameMode> GameModeChanged = null;
 
 
 	private void Awake(){
@@ -32,8 +35,11 @@ public class GameManager : MonoBehaviour {
 		terrainConfig.Init();
 		guiConfig.Init();
 		tileBlendingMap.Init();
+		MainCameraController.Inst.ManualStart();
 		World.Inst.Init();
 		EditorOptionsTray.Inst.ManualStart();
+		ScenarioEditor.Inst.ManualStart();
+		SaveLoadManager.Inst.ManualStart();
 
 		foreach(Unit unit in Unit.GetAllUnits)
 			unit.ManualStart();
@@ -52,4 +58,23 @@ public class GameManager : MonoBehaviour {
 		cts.Cancel();
 	} // End of OnApplicationQuit().
 
+
+	public void SetGameMode(GameMode mode){
+		if(mode != GameMode){
+			GameMode = mode;
+			GameModeChanged?.Invoke(mode);
+		}
+	} // End of SetGameMode().
+
+
+	public void Button_Quit(){
+		Application.Quit();
+	} // End of Button_Quit().
+
 } // End of GameManager class.
+
+
+public enum GameMode {
+	edit,
+	play
+}

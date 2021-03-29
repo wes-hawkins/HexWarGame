@@ -90,13 +90,20 @@ public class Unit : MonoBehaviour, IMouseClickable {
 				InputManager.Inst.ArrowMesh.gameObject.SetActive(path != null);
 
 				// TODO: Rewrite this, it's terrible.
-				if(Input.GetMouseButton(0)){
+				// Confirm move
+				if(Input.GetMouseButton(0) && (path != null)){
 					occupiedTile.SetOccupyingUnit(null);
 					occupiedTile = lastHoveredTile;
 					lastHoveredTile.SetOccupyingUnit(this);
 					UpdateHeight();
 					InputManager.Inst.ArrowMesh.gameObject.SetActive(false);
+					return;
+				}
 
+				// Cancel move command
+				if(Input.GetMouseButton(1)){
+					DeselectAll();
+					InputManager.Inst.ArrowMesh.gameObject.SetActive(false);
 					return;
 				}
 
@@ -127,12 +134,10 @@ public class Unit : MonoBehaviour, IMouseClickable {
 		if(invalid){
 			if(!invalidUnits.Contains(this)){
 				invalidUnits.Add(this);
-				Debug.Log("Adding to invalidUnits");
 			}
 		}else{
 			if(invalidUnits.Contains(this)){
 				invalidUnits.Remove(this);
-				Debug.Log("Removing from invalidUnits");
 				SetRecolor(Color.clear);
 			}
 		}

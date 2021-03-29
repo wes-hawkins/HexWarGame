@@ -8,6 +8,10 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
 
     public static MainCameraController Inst { get; private set; }
 
+    [SerializeField] private Camera mainCamera = null;
+    [SerializeField] private Camera terrainCamera = null;
+
+
     private abstract class CameraBehavior : IMouseDraggable {
         public abstract Vector3 CameraPosition { get; }
         public abstract Quaternion CameraRotation { get; }
@@ -132,10 +136,17 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
 
     private StrategicCamera strategicCamera = new StrategicCamera();
 
+    private float defaultFOV;
+
 
 	private void Awake() {
 		Inst = this;
 	} // End of Awake().
+
+
+    public void ManualStart(){
+        defaultFOV = mainCamera.fieldOfView;
+    } // End of ManualAwake().
 
 
 	public async void MainLoop(CancellationToken ct){
@@ -153,6 +164,12 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
     public async Task Drag(int mouseButton){
         await strategicCamera.Drag(mouseButton);
     } // End of BeginDrag() method.
+
+
+    public void EditTransition(float editLerp){
+        mainCamera.fieldOfView = defaultFOV * Mathf.Lerp(1f, 1.1f, editLerp);
+        terrainCamera.fieldOfView = mainCamera.fieldOfView;
+    } // End of EditTransition().
 
     
 } // End of MainCameraController class.

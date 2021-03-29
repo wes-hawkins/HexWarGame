@@ -206,22 +206,6 @@ public class World : MonoBehaviour {
 	} // End of RebuildTerrain().
 
 
-	public void DoEditTile(){
-		// Terrain editing
-		if(InputManager.Inst.HoveredTile != null){
-			if(Input.GetKey(KeyCode.Alpha1))
-				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.deepWater);
-			else if(Input.GetKey(KeyCode.Alpha2))
-				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.shallowWater);
-			else if(Input.GetKey(KeyCode.Alpha3))
-				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.openGrass);
-			else if(Input.GetKey(KeyCode.Alpha4))
-				InputManager.Inst.HoveredTile.SetTerrainType(TerrainType.mountains);
-		}
-	} // End of DoEditTile().
-
-
-
 	private class HexTilePathingData {
 		public HexTile Tile { get; private set; }
 		public bool isOpen = false;

@@ -44,12 +44,8 @@ public class InputManager : MonoBehaviour {
     // Main thread
     public async void MainLoop(CancellationToken ct){
         while(!ct.IsCancellationRequested){
-            // Check for input-interrupting actions here (movement, combat, etc.)
-            // ...
 
             FindHoveredTile();
-
-            World.Inst.DoEditTile();
 
             // Read player input.
             if(!UIPointerMinder.HoveredElement && (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))){
@@ -61,32 +57,38 @@ public class InputManager : MonoBehaviour {
                 IMouseClickable mouseClickable = null;
 
                 Vector3 initialMousePos = Input.mousePosition;
-                while(true){
 
-                    // Start drag if dragging.
-                    if(Vector3.Distance(initialMousePos, Input.mousePosition) > mouseDragThreshold){
-                        if(mouseDraggable == null)
-                            mouseDraggable = MainCameraController.Inst;
-                        await mouseDraggable.Drag(mouseButton);
-                        break;
-                    }
-            
-                    // Confirm click (on release)
-                    if(!Input.GetMouseButton(mouseButton)){
-                        if(mouseClickable != null)
-                            await mouseClickable.OnClicked(mouseButton);
-                        else{
-			                if(HoveredTile.occupyingUnit != null){
-				                await HoveredTile.occupyingUnit.OnClicked(mouseButton);
-			                } else {
-				                selectedUnitMesh.gameObject.SetActive(false);
-				                Unit.DeselectAll();
-			                }
+                // If edit mode is hot, do that.
+                if(ScenarioEditor.Inst.HotControl){
+                    await ScenarioEditor.Inst.DoEditTile();
+                } else {
+                    while(true){
+
+                        // Start drag if dragging.
+                        if(Vector3.Distance(initialMousePos, Input.mousePosition) > mouseDragThreshold){
+                            if(mouseDraggable == null)
+                                mouseDraggable = MainCameraController.Inst;
+                            await mouseDraggable.Drag(mouseButton);
+                            break;
                         }
-                        break;
-                    }
+            
+                        // Confirm click (on release)
+                        if(!Input.GetMouseButton(mouseButton)){
+                            if(mouseClickable != null)
+                                await mouseClickable.OnClicked(mouseButton);
+                            else{
+			                    if((HoveredTile.occupyingUnit != null) && (GameManager.Inst.GameMode == GameMode.play)){
+				                    await HoveredTile.occupyingUnit.OnClicked(mouseButton);
+			                    } else {
+				                    selectedUnitMesh.gameObject.SetActive(false);
+				                    Unit.DeselectAll();
+			                    }
+                            }
+                            break;
+                        }
 
-                    await Task.Yield();
+                        await Task.Yield();
+                    }
                 }
             }
 
@@ -95,17 +97,21 @@ public class InputManager : MonoBehaviour {
     } // End of Init().
 
 
+    public void UpdateCursorMapPosition(){
+        Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+		Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+		float rayDist;
+		if(groundPlane.Raycast(mouseRay, out rayDist))
+			CursorMapPosition = mouseRay.origin + (mouseRay.direction * rayDist);
+    } // End of UpdateCursorMapPosition().
+
+
     public void FindHoveredTile(){
         // Find hovered tile
         if(!UIPointerMinder.HoveredElement){
-		    Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
-		    Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-		    float rayDist;
-		    if(groundPlane.Raycast(mouseRay, out rayDist)){
-			    CursorMapPosition = mouseRay.origin + (mouseRay.direction * rayDist);
-			    Vector2Int roundedPos = HexMath.WorldToHexGrid(CursorMapPosition);
-			    HoveredTile = World.GetTile(roundedPos);
-		    }
+		    UpdateCursorMapPosition();
+			Vector2Int roundedPos = HexMath.WorldToHexGrid(CursorMapPosition);
+			HoveredTile = World.GetTile(roundedPos);
         } else {
             HoveredTile = null;
         }

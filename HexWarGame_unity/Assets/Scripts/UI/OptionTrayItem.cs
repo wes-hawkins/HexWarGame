@@ -23,15 +23,14 @@ public class OptionTrayItem : MonoBehaviour {
 
 
     public void Deselect(){
-        Debug.Log(name + " deselected");
         indenter.localPosition = Vector3.zero;
         labelText.color = Color.white;
         labelText.fontSharedMaterial = EditorOptionsTray.Inst.NormalTextMaterial;
         background.color = Color.black;
     } // End of Deselect().
 
+
     public void Select(){
-        Debug.Log(name + " selected");
         indenter.localPosition = Vector3.right * indent;
         labelText.color = Color.black;
         labelText.fontSharedMaterial = EditorOptionsTray.Inst.SelectedTextMaterial;

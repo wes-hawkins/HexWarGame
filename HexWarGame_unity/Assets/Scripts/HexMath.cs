@@ -1,6 +1,8 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 public class HexMath {
 
@@ -610,8 +612,11 @@ public class HexMath {
 		targetMesh.RecalculateBounds();
 	} // End of GetGrid().
 
+
+
+
 	/*
-	static function InverseGetVertex( tile : Vector2, vertex : Vector2 ) : int
+	public static int InverseGetVertex(Vector2 tile, Vector2 point) : int
 	{
 		if( vertex == ( tile + ( Vector2( 2.0, -1.0 ) * ( 1.0 / 3.0 ))))
 			return 0;
@@ -691,6 +696,10 @@ public class HexMath {
 	} // End of HexPos().
 
 
+
+	public static Vector2Int WorldToHexGrid(Vector2 worldPos){
+		return WorldToHexGrid(worldPos.MapTo3D());
+	}
 	public static Vector2Int WorldToHexGrid(Vector3 worldPos){
 		
 		int row = Mathf.FloorToInt((worldPos.z + (sideL / 2f)) / cellHeight);
@@ -729,297 +738,77 @@ public class HexMath {
 
 
 
-	// Gets 'straight line' distance from a hex to a point in relative space, pointed along the cubic axese.
-	public static float HexagonSpaceDistance(Vector2 samplePoint){
-
-		// Determine which egde we're closest to.
-		float angle = (Mathf.PI / 2f) - Mathf.Atan2(samplePoint.y, samplePoint.x);
-		int edge = (Mathf.FloorToInt(angle / (Mathf.PI / 3f)) + 6) % 6;
-
-		Vector3 leftVertex = GetVertex(edge);
-		Vector3 rightVertex = GetVertex(edge + 1);
-
-		float dist = Utilities.FindDistanceToSegment(samplePoint, leftVertex.ToMap2D(), rightVertex.ToMap2D());
-		return dist;
-	} // End of DistToEdge().
-
-
-
-
-	/*
 	// This function will return if a hexagon intersects or is tangent to a line.
-	static function LineIntersectsTile( lineStart : Vector2, lineEnd : Vector2, tile : Vector2 ) : boolean
-	{
-		var side1 : int;
-		side1 = Turn( lineStart, lineEnd, GetVertex( tile, 0 ));
+	public static bool LineIntersectsTile(Vector2 lineStart, Vector2 lineEnd, Vector2Int tile){
+		int side1 = 0;
+		Vector2 tileWorldPos = HexGridToWorld(tile).ToMap2D();
+		side1 = Turn(lineStart, lineEnd, tileWorldPos + GetVertex(0).ToMap2D());
 	
 		// If line exactly hits vertex, return true.
-		if( side1 == 0 )
+		if(side1 == 0)
 			return true;
-		for( var i = 1; i < 6; i++ )
-		{
-			var j = Turn( lineStart, lineEnd, GetVertex( tile, i ));
+		for(int i = 1; i < 6; i++){
+			int j = Turn(lineStart, lineEnd, tileWorldPos + GetVertex(i).ToMap2D());
+
 			// If line exactly hits vertex or the tile 'envelopes' the line (has points on both sides), return true.
 			if(( j == 0 ) || ( j != side1 ))
 				return true;
 		}
 	
 		return false;
-	}
+	} // End of LineIntersectsTile().
 
 
 
-	static var next1 : HexTile;
-	static var next2 : HexTile;
-	static var cur1 : HexTile;
-	static var cur2 : HexTile;
-	static var last1 : HexTile;
-	static var last2 : HexTile;  
+	// Returns all cells that are intersected by a line.
+	public static Vector2Int[] GetLineSupercover(Vector2 start, Vector2 end){
+		List<Vector2Int> coveredTiles = new List<Vector2Int>(); // Tiles we've found in the supercover.
+		List<Vector2Int> openTiles = new List<Vector2Int>(); // Tiles we need to check.
+		HashSet<Vector2Int> closedTiles = new HashSet<Vector2Int>(); // Tiles we've already checked, whether in or out.
 
-	static function GetLineSupercover( start : Vector2, end : Vector2 )
-	{
-		var potential = new Vector2[ 99999 ];
-		var num : int;
+		// Gotta start somewhere.
+		Vector2Int startTile = WorldToHexGrid(start);
+		Vector2Int endTile = WorldToHexGrid(end);
 
-		cur1 = World.GetTile( start );
-		cur2 = null;
-		last1 = null;
-		last2 = null;
+		float sqrDistToEnd = (end - start).sqrMagnitude;
 
-		while( true )
-		{
-			// Break if hit obstacle
-			if(( cur1.h != 0 ) || ( cur2 && ( cur2.h != 0 )))
-				break;
-		
-	
-			if( cur1 )
-			{
-				potential[ num ] = cur1.pos2;
-				num++;
-			}
-			if( cur2 )
-			{
-				potential[ num ] = cur2.pos2;
-				num++;
-			}
-		
-			// If we've hit the target, break.
-			if( !cur1 || ( cur1.pos2 == end ) || ( cur2 && ( cur2.pos2 == end )))
-				break;
-		
-			next1 = null;
-			next2 = null;
-		
-			NextHexes( cur1.pos2, start, end );
-			if( cur2 )
-				NextHexes( cur2.pos2, start, end );
-		
+		if(startTile == endTile)
+			return new Vector2Int[]{ startTile };
 
-			last1 = cur1;
-			last2 = cur2;
-			cur1 = next1;
-			cur2 = next2;
-		}
-	
-		var tiles = new Vector2[ num ];
-		for( var k = 0; k < tiles.length; k++ )
-			tiles[k] = potential[k];
+		closedTiles.Add(startTile); // Don't need to check it anymore.
+		openTiles.Add(startTile); // We'll start with our neighbors.
 
-		return tiles;
-	}
+		while(openTiles.Count > 0){
+			Vector2Int thisTile = openTiles[0];
+			openTiles.RemoveAt(0); // Pull it outta the queue.
+			closedTiles.Add(thisTile);
 
-	static function NextHexes( cur : Vector2, start : Vector2, end : Vector2 ) : int
-	{
-		var h : Vector2;
-		var turn0 : int;
-		var turn1 : int;
-	
-		for ( var i = 0; i < 6 ; i++ )
-		{
-			// These together define one side of the hexagon. The current neighbor is the neighbor who shares the side with
-			//   the current hexagon.
-			// Side of the line the first vertex is on.
-			turn0 = Turn( start, end, GetVertex( cur, i ));
-			// Side of the line the next (clockwise) vertex is on.
-			turn1 = Turn( start, end, GetVertex( cur, i + 1 ));
-		
-		
-			// Success if either vertex intersects the line exactly, or the line passes between them (turns are different.)
-			if(( turn0 == 0 ) || ( turn1 == 0 ) || ( turn0 < turn1 ))
-			{
-				// Consider the hexagon that shares the same side.
-				h = cur + DirVector(i);
-				if(( h != cur1.pos2 ) && ( !cur2 || ( h != cur2.pos2 )) && ( !next1 || ( h != next1.pos2 )) && ( !next2 || ( h != next2.pos2 )) && ( !last1 || ( h != last1.pos2 )) && ( !last2 || ( h != last2.pos2 )))
-				{
-					if( next1 == null )
-						next1 = World.GetTile(h);
-					else if( next2 == null )
-						next2 = World.GetTile(h);
-				}
-				// If the right vertex is on the line, consider the neighbor to the right.
-				if( turn0 == 0 )
-				{
-					h = cur + DirVector( i - 1 );
-					if(( h != cur1.pos2 ) && ( !cur2 || ( h != cur2.pos2 )) && ( !next1 || ( h != next1.pos2 )) && ( !next2 || ( h != next2.pos2 )) && ( !last1 || ( h != last1.pos2 )) && ( !last2 || ( h != last2.pos2 )))
-					{
-						if( next1 == null )
-							next1 = World.GetTile(h);
-						else if( next2 == null )
-							next2 = World.GetTile(h);
-					}
-				}
-				// If the left vertex is on the line, consider the neighbor to the left.
-				if( turn1 == 0 )
-				{
-					h = cur + DirVector( i + 1 );
-					if(( h != cur1.pos2 ) && ( !cur2 || ( h != cur2.pos2 )) && ( !next1 || ( h != next1.pos2 )) && ( !next2 || ( h != next2.pos2 )) && ( !last1 || ( h != last1.pos2 )) && ( !last2 || ( h != last2.pos2 )))
-					{
-						if( next1 == null )
-							next1 = World.GetTile(h);
-						else if( next2 == null )
-							next2 = World.GetTile(h);
-					}
+			float sqrDistFromStart = (HexMath.HexGridToWorld(thisTile).ToMap2D() - start).sqrMagnitude;
+			if((thisTile == endTile) || (LineIntersectsTile(start, end, thisTile) && (sqrDistFromStart < sqrDistToEnd))){
+				coveredTiles.Add(thisTile);
+				// If we overlapped, we're interested in our neighbors.
+
+				int dirTowardsEnd = WorldVectorToHexDir(end - HexGridToWorld(thisTile).ToMap2D());
+				for(int d = -1; d < 2; d++){
+					Vector2Int neighbor = GetAdjacentCell(thisTile, dirTowardsEnd + d);
+					if(!closedTiles.Contains(neighbor))
+						openTiles.Add(neighbor);
 				}
 			}
 		}
-	
-		if( next2 == null )
-			return 1;
-		else
-			return 2;
-	}
+		return coveredTiles.ToArray();
+
+	} // End of GetLineSupercover() method.
 
 
 
+	// Gives the hex direction towards a vector.
+	public static int WorldVectorToHexDir(Vector2 samplePoint){
 
+		// Determine which egde we're closest to.
+		float angle = (Mathf.PI / 2f) - Mathf.Atan2(samplePoint.y, samplePoint.x);
+		return (Mathf.FloorToInt(angle / (Mathf.PI / 3f)) + 6) % 6;
+	} // End of DistToEdge().
 
-	// Returns 'true' if a straight line can be drawn between the start hex and the end hex.
-	// NOTE: does NOT consider lines tangent to hexes to be overlapping.
-	static function TestFOVToTile( start : Vector2, end : Vector2, targetVertex : int ) : boolean
-	{
-		cur1 = World.GetTile( start );
-		cur2 = null;
-		last1 = null;
-		last2 = null;
-	
-		while( true )
-		{
-			if( cur1 && ( cur1.h == 0 ))
-				World.visHit[ cur1.pos2.x + World.mapSize, cur1.pos2.y + World.mapSize ] = true;
-		
-			if( cur2 && ( cur2.h == 0 ))
-				World.visHit[ cur2.pos2.x + World.mapSize, cur2.pos2.y + World.mapSize ] = true;
-
-
-			// Break if hit obstacle
-			if( !cur1 || (( cur1.h > 0 ) && ( !cur2 || ( cur2.h > 0 ))))
-				return false;
-		
-			// If we've hit the target, break.
-			if( !cur1 || ( cur1.pos2 == end ) || ( cur2 && ( cur2.pos2 == end )))
-				return true;
-		
-		
-			next1 = null;
-			next2 = null;
-		
-			NextHexesFOV( cur1.pos2, start, end, targetVertex );
-			if( cur2 )
-				NextHexesFOV( cur2.pos2, start, end, targetVertex );
-		
-			last1 = cur1;
-			last2 = cur2;
-			cur1 = next1;
-			cur2 = next2;
-		}
-	}
-
-	static function TestFOVToTile( start : Vector2, end : Vector2 ) : boolean
-	{
-		return TestFOVToTile( start, end, -1 ); 
-	}
-
-
-	static function NextHexesFOV( cur : Vector2, start : Vector2, end : Vector2, targetVertex : int ) : int
-	{
-		var h : Vector2;
-		var endActual : Vector2;
-	
-		if( targetVertex == -1 )
-			endActual = end;
-		else
-			endActual = GetVertex( end, targetVertex );
-	
-		for ( var i = 0; i < 6 ; i++ )
-		{
-			// These together define one side of the hexagon. The current neighbor is the neighbor who shares the side with
-			//   the current hexagon.
-			// Side of the line the first vertex is on.
-			var vert0 = GetVertex( cur, i );
-			var turn0 = Turn( start, endActual, vert0 );
-			// Side of the line the next (clockwise) vertex is on.
-			var vert1 = GetVertex( cur, i + 1 );
-			var turn1 = Turn( start, endActual, vert1 );
-		
-			if( vert0 == endActual )
-				next1 = World.GetTile( end );
-		
-			// Success if either vertex intersects the line exactly, or the line passes between them (turns are different.)
-			else if(( turn0 == 0 ) || (( turn0 != 0 ) && ( turn1 != 0 ) && ( turn0 < turn1 )))
-			{
-				// Consider the hexagon that shares the same side if we pass between the points (in the positive direction.)
-				if(( turn0 != 0 ) && ( turn1 != 0 ) && ( turn0 < turn1 ))
-				{
-					h = cur + DirVector(i);
-					if(( h != cur1.pos2 ) && ( !cur2 || ( h != cur2.pos2 )) && ( !next1 || ( h != next1.pos2 )) && ( !next2 || ( h != next2.pos2 )) && ( !last1 || ( h != last1.pos2 )) && ( !last2 || ( h != last2.pos2 )))
-					{
-						if( next1 == null )
-							next1 = World.GetTile(h);
-						else if( next2 == null )
-							next2 = World.GetTile(h);
-					}
-				}
-				// If vertex on the line, test if we overlap the left hex...
-				h = cur + DirVector( i );
-				if(( turn0 == 0 ) && ( turn1 == 1 ) && ( Turn( start, endActual, GetVertex( h, InverseGetVertex( h, vert0 ) + 1 )) <= 0 ))
-				{
-					if(( h != cur1.pos2 ) && ( !cur2 || ( h != cur2.pos2 )) && ( !next1 || ( h != next1.pos2 )) && ( !next2 || ( h != next2.pos2 )) && ( !last1 || ( h != last1.pos2 )) && ( !last2 || ( h != last2.pos2 )))
-					{
-						if( next1 == null )
-							next1 = World.GetTile(h);
-						else if( next2 == null )
-							next2 = World.GetTile(h);
-					}
-				}
-				// ...and the right hex...
-				h = cur + DirVector( i - 1 );
-				if(( turn0 == 0 ) && ( turn1 == 1 ) && ( Turn( start, endActual, GetVertex( h, InverseGetVertex( h, vert0 ) - 1 )) >= 0 ))
-				{
-					if(( h != cur1.pos2 ) && ( !cur2 || ( h != cur2.pos2 )) && ( !next1 || ( h != next1.pos2 )) && ( !next2 || ( h != next2.pos2 )) && ( !last1 || ( h != last1.pos2 )) && ( !last2 || ( h != last2.pos2 )))
-					{
-						if( next1 == null )
-							next1 = World.GetTile(h);
-						else if( next2 == null )
-							next2 = World.GetTile(h);
-					}
-				}
-			}
-		}
-	
-	
-		if( next2 == null )
-			return 1;
-		else
-			return 2;
-	}
-
-
-
-	// Returns the difference between two directions.
-	public static int DeltaDir(int dir0, int dir1){
-		return Mathf.RoundToInt(Mathf.DeltaAngle(dir0 * 60, dir1 * 60) / 60);
-	} // End of DeltaDir() method.
-	*/
 
 } // End of HexMath class.

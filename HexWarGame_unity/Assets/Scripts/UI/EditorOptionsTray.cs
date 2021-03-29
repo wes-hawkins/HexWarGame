@@ -23,9 +23,18 @@ public class EditorOptionsTray : MonoBehaviour {
 
 
     // 0 = terrain, 1 = structures, 2 = units
-    private int selectedCategory = 0;
+    public EditorOptionCategory SelectedCategory { get; private set; } = EditorOptionCategory.terrain;
     private int[] selectedOption = new int[3]; // Keep track of selected option in each list.
     private List<OptionTrayItem>[] optionLists = new List<OptionTrayItem>[3];
+
+    public TerrainType SelectedTerrainType{
+        get {
+            if(SelectedCategory != EditorOptionCategory.terrain)
+                return TerrainType.openGrass;
+            else
+                return (TerrainType)selectedOption[0];
+        }
+    }
 
     [Space]
     [SerializeField] private Material normalTextMaterial = null; public Material NormalTextMaterial { get { return normalTextMaterial; } }
@@ -66,8 +75,7 @@ public class EditorOptionsTray : MonoBehaviour {
             newItem.Init(terrainData.Name, terrainData.Sprite);
             optionLists[0].Add(newItem);
             int j = i;
-            newItem.Button.onClick.AddListener(delegate{ OptionSelected(0, j); });
-            Debug.Log("Button set up " + j);
+            newItem.Button.onClick.AddListener(delegate{ OptionSelected(EditorOptionCategory.terrain, j); });
         }
 
         // Set up structure options
@@ -80,6 +88,9 @@ public class EditorOptionsTray : MonoBehaviour {
         optionTrayItemSource.transform.SetParent(optionTrayCategorySource.transform);
         optionTrayItemSource.gameObject.SetActive(false);
 
+        // Default option
+        OptionSelected(EditorOptionCategory.terrain, 2);
+
 	} // End of Awake().
 
 
@@ -89,18 +100,23 @@ public class EditorOptionsTray : MonoBehaviour {
     } // End of SetWidthWithScrollbar().
 
 
-    private void OptionSelected(int category, int optionNum){
-        Debug.Log("OptionSelected(" + category + ", " + optionNum + ")");
-
+    private void OptionSelected(EditorOptionCategory category, int optionNum){
         // Clear existing selection.
-        int previousOption = selectedOption[selectedCategory];
+        int previousOption = selectedOption[(int)SelectedCategory];
         if(previousOption != -1)
-            optionLists[selectedCategory][previousOption].Deselect();
+            optionLists[(int)SelectedCategory][previousOption].Deselect();
 
-        selectedCategory = category;
-        selectedOption[category] = optionNum;
-        optionLists[category][optionNum].Select();
+        SelectedCategory = category;
+        selectedOption[(int)category] = optionNum;
+        optionLists[(int)category][optionNum].Select();
 
     } // End of OptionSelected().
 
 } // End of EditorOptionsTray class.
+
+
+public enum EditorOptionCategory {
+    terrain,
+    structures,
+    units
+}

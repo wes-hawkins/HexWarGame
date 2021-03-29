@@ -33,7 +33,7 @@ public class HexTile {
 
 		int distFromCenter = HexMath.VancouverDist(Vector2Int.zero, GridPos2);
 		int numTerrainTypes = System.Enum.GetValues(typeof(TerrainType)).Length - 1;
-		TerrainType = (TerrainType)Mathf.Clamp(numTerrainTypes - (distFromCenter / 3), 0, numTerrainTypes);
+		//TerrainType = (TerrainType)Mathf.Clamp(numTerrainTypes - (distFromCenter / 3), 0, numTerrainTypes);
 
 	} // End of constructor.
 

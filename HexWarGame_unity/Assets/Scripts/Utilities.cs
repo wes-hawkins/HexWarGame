@@ -50,4 +50,32 @@ public static class Utilities {
         return Mathf.Sqrt(dx * dx + dy * dy);
     } // End of FindDistanceToSegment() method.
 
+
+    public static float LinToSmoothLerp(float input) {
+		return 0.5f + ((Mathf.Sin(Mathf.PI * (Mathf.Clamp01(input) - 0.5f)) * 0.5f));
+	} // End of LinearLerpToSmooth().
+
+	// from 0 to 1, with smoothing towards 1.
+	public static float EaseOut(float input) {
+		return Mathf.Sin(Mathf.PI * Mathf.Clamp01(input) * 0.5f);
+	} // End of EaseOut().
+
+	public static float EaseIn(float input) {
+		return Mathf.Sin((1.5f * Mathf.PI) + (Mathf.PI * Mathf.Clamp01(input) * 0.5f)) + 1f;
+	} // End of EaseIn().
+
+	public static float EaseOutThenIn(float input) {
+		return Mathf.Sin(Mathf.PI * (Mathf.Clamp01(input) * 2f) * 0.5f);
+	} // End of EaseOutThenIn().
+
+	public static float SmoothPingPong01(float input) {
+		return 0.5f + (Mathf.Sin((-0.5f * Mathf.PI) + input * 2f * Mathf.PI) * 0.5f);
+	} // End of SmoothPingPong01().
+
+
+	public static float Bias(float x, float bias){
+		float k = Mathf.Pow(1f - bias, 3f);
+		return (x * k) / ((x * k) - (x + 1));
+	} // End of Bias().
+
 } // End of Utilities class.
