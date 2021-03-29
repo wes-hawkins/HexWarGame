@@ -54,8 +54,8 @@ public class GameManager : MonoBehaviour {
 
 
 	private void OnApplicationQuit() {
-		Debug.Log("Shutting down...");
 		cts.Cancel();
+		Debug.Log("Shutting down...");
 	} // End of OnApplicationQuit().
 
 

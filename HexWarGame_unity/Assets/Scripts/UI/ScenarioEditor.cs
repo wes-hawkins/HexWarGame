@@ -134,4 +134,17 @@ public class ScenarioEditor : MonoBehaviour {
 		}
 	} // End of DoEditTile().
 
+
+	public void Button_New(){
+
+	} // End of Button_New().
+
+	public void Button_Save(){
+		SaveLoadManager.Inst.SaveGameMenu();
+	} // End of Button_Save().
+
+	public void Button_Load(){
+		SaveLoadManager.Inst.LoadGameMenu();
+	} // End of Button_Load().
+
 } // End of ScenarioEditor().

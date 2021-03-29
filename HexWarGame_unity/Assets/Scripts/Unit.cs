@@ -145,6 +145,8 @@ public class Unit : MonoBehaviour, IMouseClickable {
 
 
 	private void SetRecolor(Color color){
+		if(!Application.isPlaying) return;
+
 		foreach(Renderer renderer in renderers)
 			renderer.material.SetColor("_Recolor", color);
 	} // End of SetRecolor() method.
