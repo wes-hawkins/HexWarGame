@@ -35,8 +35,8 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
         float maxTilt = 80;
 
         private float zoomRate = 0.2f;
-        private float targetZoomDist = 10f;
-        private float zoomDist = 10f;
+        private float targetZoomDist = 20f;
+        private float zoomDist = 20f;
         private float zoomDistVel = 0f;
         private float minZoomDist = 2f;
         private float maxZoomDist = 20f;
@@ -106,6 +106,7 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
         } // End of Drag().
 
         private async Task DragSlew(){
+            InputManager.Inst.ClearHoveredTile();
 		    Vector3 cameraLocalCursorStart = Camera.main.transform.InverseTransformPoint(InputManager.Inst.CursorMapPosition);
 		    Vector3 cameraLocalUpNormal = Camera.main.transform.InverseTransformVector(Vector3.up);
             Vector3 initialTargetPosition = focusPosition;
@@ -124,6 +125,7 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
         } // End of DragSlew().
 
         private async Task DragRotate(){
+            InputManager.Inst.ClearHoveredTile();
             while(Input.GetMouseButton(1)){
 			    targetEulers += new Vector2(-Input.GetAxis("Mouse Y"), Input.GetAxis("Mouse X")) * eulersRate;
                 targetEulers.x = Mathf.Clamp(targetEulers.x, minTilt, maxTilt);

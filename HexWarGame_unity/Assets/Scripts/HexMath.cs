@@ -575,6 +575,7 @@ public class HexMath {
 
 
 
+	// mapSize = how big the map is, and to which size the grid should 'fill in' outwards.
 	public static void GetGrid(Mesh targetMesh, int mapRadius, float gridThickness){
 		List<Vector3> verts = new List<Vector3>();
 		List<int> tris = new List<int>();
@@ -612,6 +613,76 @@ public class HexMath {
 		targetMesh.SetTriangles(tris.ToArray(), 0);
 		targetMesh.RecalculateBounds();
 	} // End of GetGrid().
+
+
+
+	public static void GetMapBrim(Mesh targetMesh, int mapRadius){
+		// Build outside brim
+		Vector2Int[] brimTiles = GetVancouverRing(Vector2Int.zero, mapRadius + 1);
+		float brimSize = mapRadius + 10f;
+
+		List<Vector3> verts = new List<Vector3>();
+		List<int> tris = new List<int>();
+
+		for(int i = 0; i < brimTiles.Length; i++){
+			Vector3 worldPos = HexGridToWorld(brimTiles[i]);
+			
+			Vector3Int cubicPos = AxialToCubic(brimTiles[i]);
+			int v = 0;
+			int v2 = 0;
+			if((cubicPos.x == (mapRadius + 1)) && (cubicPos.y < 0)){ // Southeast
+				v = 0;
+				v2 = 5;
+			} else if((cubicPos.y == -(mapRadius + 1)) && (cubicPos.x > 0)){ // South
+				v = 0;
+				v2 = 5;
+			} else if((cubicPos.z == -(mapRadius + 1)) && (cubicPos.x > -(mapRadius + 1))){ // Southwest
+				v = 1;
+				v2 = 0;
+			} else if((cubicPos.x == -(mapRadius + 1)) && (cubicPos.y > 0)){ // Northwest
+				v = 3;
+				v2 = 2;
+			} else if((cubicPos.y == (mapRadius + 1)) && (cubicPos.x < 0)){ // North
+				v = 3;
+				v2 = 2;
+			} else if((cubicPos.z == (mapRadius + 1)) && (cubicPos.x < (mapRadius + 1))){ // Northeast
+				v = 4;
+				v2 = 3;
+			
+			} else
+				continue;
+
+			Vector3 leftVertex = worldPos + GetVertex(v);
+			Vector3 leftBrimPoint = leftVertex.normalized * brimSize;
+
+			Vector3 rightVertex = worldPos + GetVertex(v2);
+			Vector3 rightBrimPoint = rightVertex.normalized * brimSize;
+
+			verts.Add(leftVertex);
+			verts.Add(leftBrimPoint);
+			verts.Add(rightVertex);
+			verts.Add(rightBrimPoint);
+
+			//Debug.DrawLine(leftVertex, leftBrimPoint, Color.white, 60f);
+			//Debug.DrawLine(rightVertex, rightBrimPoint, Color.red, 60f);
+		}
+
+		// Wind triangles
+		for(int i = 2; i < verts.Count; i += 2){
+			tris.Add(i);
+			tris.Add(i - 2);
+			tris.Add(i - 1);
+
+			tris.Add(i);
+			tris.Add(i - 1);
+			tris.Add(i + 1);
+		}
+
+		targetMesh.SetTriangles(new int[0], 0);
+		targetMesh.SetVertices(verts.ToArray());
+		targetMesh.SetTriangles(tris.ToArray(), 0);
+		targetMesh.RecalculateBounds();
+	} // End of GetMapBrim() method.
 
 
 
@@ -805,7 +876,6 @@ public class HexMath {
 
 	// Gives the hex direction towards a vector.
 	public static int WorldVectorToHexDir(Vector2 samplePoint){
-
 		// Determine which egde we're closest to.
 		float angle = (Mathf.PI / 2f) - Mathf.Atan2(samplePoint.y, samplePoint.x);
 		return (Mathf.FloorToInt(angle / (Mathf.PI / 3f)) + 6) % 6;

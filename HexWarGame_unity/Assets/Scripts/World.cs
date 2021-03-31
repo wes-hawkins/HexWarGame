@@ -20,43 +20,16 @@ public class World : MonoBehaviour {
 
 	[SerializeField] private MeshFilter physicalGroundGridMesh = null;
 	[SerializeField] private MeshFilter virtualGroundGridMesh = null;
+	[Space]
+	[SerializeField] private Transform waterPlane = null;
+	[SerializeField] private MeshFilter gridBrimMesh = null;
+
 
 
 
 	private void Awake(){
 		Inst = this;
 	} // End of Awake() method.
-
-
-	public void Init(){
-		// Generate maps
-		HexTile[] potentialallTiles = new HexTile[HexMath.VancouverArea(mapRadius)];
-		int hexTileCount = 0;
-		for(int x = -mapRadius; x <= mapRadius; x++){
-			for(int y = -mapRadius; y <= mapRadius; y++){
-				if(HexMath.VancouverDist(Vector2Int.zero, new Vector2Int( x, y )) <= mapRadius){
-					HexTile newHex = new HexTile(new Vector2Int(x, y));
-				
-					// Cache new hex for straight hex list.
-					potentialallTiles[hexTileCount] = newHex;
-					hexTileCount++;
-				
-					// Add new hex to hex map.
-					tileMap.Add(new Vector2Int(x, y), newHex);
-				}
-			}
-		}
-	
-		allTiles = new HexTile[hexTileCount];
-		for(int i = 0; i < hexTileCount; i++)
-			allTiles[i] = potentialallTiles[i];
-
-		HexMath.GetGrid(physicalGroundGridMesh.mesh, mapRadius, GUIConfig.GridOutlineThickness);
-		virtualGroundGridMesh.mesh = physicalGroundGridMesh.mesh;
-
-		RebuildTerrain();
-	} // End of Start().
-
 
 
 	public void LoadMap(SerializableTileInfo[] map){
@@ -78,6 +51,10 @@ public class World : MonoBehaviour {
 			}
 		}
 
+		HexMath.GetGrid(physicalGroundGridMesh.mesh, mapRadius, GUIConfig.GridOutlineThickness);
+		virtualGroundGridMesh.mesh = physicalGroundGridMesh.mesh;
+
+		HexMath.GetMapBrim(gridBrimMesh.mesh, mapRadius);
 		
 	} // End of LoadMap().
 
@@ -95,8 +72,11 @@ public class World : MonoBehaviour {
 
 		// The terrain sits at the ocean depth height, and raises up to create terrain.
 		Terrain terr = Terrain.activeTerrain;
+		//float terrainSize = mapRadius * 2f;
+		float terrainSize = (mapRadius + 1f) * 2f;
+		waterPlane.localScale = new Vector3(terrainSize, terrainSize, 1f);
+		terr.terrainData.size = new Vector3(terrainSize, TerrainConfig.MountainHeight - TerrainConfig.OceanFloor, terrainSize);
 		terr.transform.position = new Vector3(-terr.terrainData.size.x / 2f, TerrainConfig.OceanFloor, -terr.terrainData.size.z / 2f);
-		terr.terrainData.size = new Vector3(50f, TerrainConfig.MountainHeight - TerrainConfig.OceanFloor, 50f);
 
 		//float terrainResolution = terr.terrainData.heightmapResolution / terr.terrainData.size.x; // heightmap-units per world-unit
 		Vector2 centerTerrainLocalPos = center - terr.transform.position.ToMap2D(); // center position relative to heightmap

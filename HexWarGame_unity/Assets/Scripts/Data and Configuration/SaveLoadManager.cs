@@ -14,6 +14,7 @@ public class SaveLoadManager : MonoBehaviour {
     public string SaveFilePath(string saveName) { return PlayerPrefs.GetString(workingDirectoryPlayerPref, defaultDirectory) + "/" + saveName + scenarioFileExtension; }
 
 	private string workingDirectoryPlayerPref = "workingDirectory";
+	private string workingFilenamePlayerPref = "workingScenarioFile";
 	private string scenarioFileExtension = ".scenario";
 
 	private string currentWorkingTitle = ""; // Name of the current scenario, for seeding save game text field.
@@ -22,6 +23,7 @@ public class SaveLoadManager : MonoBehaviour {
 
 	[SerializeField] private Transform filesContainer = null;
 	[SerializeField] private TextMeshProUGUI directoryText = null;
+	[SerializeField] private Button newFolderButton = null;
 	[SerializeField] private Button gameDirectoryButton = null;
 	[SerializeField] private Button confirmButton = null;
 	[SerializeField] private TextMeshProUGUI confirmButtonText = null;
@@ -50,6 +52,11 @@ public class SaveLoadManager : MonoBehaviour {
 		fileEntrySource.SetActive(false);
 
 		fileBrowserWindow.SetActive(false);
+
+		// Attempt to load default map
+		if(!LoadGame(PlayerPrefs.GetString(workingFilenamePlayerPref, "")))
+			World.Inst.RebuildTerrain();
+
 	} // End of ManualStart() method.
 
 
@@ -110,6 +117,17 @@ public class SaveLoadManager : MonoBehaviour {
 	} // End of Button_GameDirectory() method.
 
 
+	public void Button_NewFolder(){
+		string newDirectory = PlayerPrefs.GetString(workingDirectoryPlayerPref) + "/" + filenameField.text;
+		if(!Directory.Exists(newDirectory) 
+			&& !File.Exists(SaveFilePath(filenameField.text)))
+		{
+			Directory.CreateDirectory(newDirectory);
+			Populate(PlayerPrefs.GetString(workingDirectoryPlayerPref));
+		}
+	} // End of Button_NewFolder().
+
+
 	public void Button_Confirm(){
 		switch(mode){
 			case FileBrowserMode.LOADING:
@@ -168,6 +186,7 @@ public class SaveLoadManager : MonoBehaviour {
 		file.Close();
 
 		Debug.Log("Saved " + saveGlob.scenarioName + " to \"" + SaveFilePath(saveName) + "\".");
+		PlayerPrefs.SetString(workingFilenamePlayerPref, saveName);
 		currentWorkingTitle = saveName;
 		Close();
 
@@ -175,7 +194,7 @@ public class SaveLoadManager : MonoBehaviour {
 
 
 
-	private void LoadGame(string saveName){
+	private bool LoadGame(string saveName){
 		Debug.Log("Attempting to load " + SaveFilePath(saveName) + "...");
 		if(File.Exists(SaveFilePath(saveName))){
 
@@ -196,11 +215,13 @@ public class SaveLoadManager : MonoBehaviour {
 			// ...
 
 			Debug.Log("Loaded " + saveGlob.scenarioName + ".");
+			PlayerPrefs.SetString(workingFilenamePlayerPref, saveName);
 			currentWorkingTitle = saveName;
-
 			Close();
+			return true;
 		} else {
 			Debug.LogWarning("Couldn't find file: " + SaveFilePath(saveName));
+			return false;
 		}
 	} // End of SaveGame().
 
@@ -228,6 +249,8 @@ public class SaveLoadManager : MonoBehaviour {
 				confirmButton.interactable = File.Exists(SaveFilePath(filenameField.text));
 				break;
 		}
+
+		newFolderButton.interactable = !Directory.Exists(PlayerPrefs.GetString(workingDirectoryPlayerPref) + "/" + filenameField.text) && !File.Exists(SaveFilePath(filenameField.text));
 	} // End of UpdateInputFieldInteractibility().
 
 

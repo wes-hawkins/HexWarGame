@@ -36,7 +36,6 @@ public class GameManager : MonoBehaviour {
 		guiConfig.Init();
 		tileBlendingMap.Init();
 		MainCameraController.Inst.ManualStart();
-		World.Inst.Init();
 		EditorOptionsTray.Inst.ManualStart();
 		ScenarioEditor.Inst.ManualStart();
 		SaveLoadManager.Inst.ManualStart();

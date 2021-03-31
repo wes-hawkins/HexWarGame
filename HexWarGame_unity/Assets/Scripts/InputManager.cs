@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
+using TMPro;
 
 public class InputManager : MonoBehaviour {
 
@@ -28,6 +29,8 @@ public class InputManager : MonoBehaviour {
 	[SerializeField] private MeshFilter selectedUnitMesh = null;
 
 	[SerializeField] private MeshFilter arrowMesh = null; public MeshFilter ArrowMesh { get { return arrowMesh; } }
+
+	[SerializeField] private TextMeshProUGUI hoveredTileInfo = null;
 
 
 
@@ -118,11 +121,22 @@ public class InputManager : MonoBehaviour {
     } // End of FindHoveredTile().
 
 
+    public void ClearHoveredTile(){
+        HoveredTile = null;
+    } // End of ClearHoveredTile().
+
+
 	private void Update() {
         // Animate tiles (away from input thread; this is fine.)
-        if(HoveredTile != null)
+        if(HoveredTile != null){
     		HexMath.GetTilesFill(hoveredCellMesh.mesh, new Vector2Int[]{ InputManager.Inst.HoveredTile.GridPos2 }, (GUIConfig.GridOutlineThickness * -0.5f));
+
+            hoveredTileInfo.rectTransform.position = Camera.main.WorldToScreenPoint(HexMath.HexGridToWorld(HoveredTile.GridPos2));
+            //hoveredTileInfo.SetText(HoveredTile.GridPos3.x + ", " + HoveredTile.GridPos3.y + ", " + HoveredTile.GridPos3.z);
+            hoveredTileInfo.SetText(HoveredTile.GridPos2.x + ", " + HoveredTile.GridPos2.y);
+        }
         hoveredCellMesh.gameObject.SetActive(HoveredTile != null);
+        hoveredTileInfo.gameObject.SetActive(HoveredTile != null);
 
 		// Selected unit outline effect
 		if(Unit.SelectedUnit != null)
