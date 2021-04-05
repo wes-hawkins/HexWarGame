@@ -34,29 +34,46 @@ public class World : MonoBehaviour {
 
 	public void LoadMap(SerializableTileInfo[] map){
 		tileMap.Clear();
-		for(mapRadius = 0; mapRadius < 50; mapRadius++){
-			if(HexMath.VancouverArea(mapRadius) == map.Length){
-				Vector2Int[] vancSquare = HexMath.GetVancouverSquare(Vector2Int.zero, World.mapRadius);
-				allTiles = new HexTile[map.Length];
-
-				for(int i = 0; i < map.Length; i++){
-					HexTile newTile = new HexTile(vancSquare[i]);
-					newTile.SetTerrainType(map[i].TerrainType, false);
-					allTiles[i] = newTile;
-					tileMap.Add(vancSquare[i], newTile);
-				}
-
-				RebuildTerrain();
-				break;
-			}
+		mapRadius = HexMath.VancouverAreaToRadius(map.Length);
+		if(mapRadius == -1){
+			Debug.LogError("Map has invalid area!");
+			return;
 		}
+		Vector2Int[] vancSquare = HexMath.GetVancouverSquare(Vector2Int.zero, World.mapRadius);
+		allTiles = new HexTile[map.Length];
+		for(int i = 0; i < map.Length; i++){
+			HexTile newTile = new HexTile(vancSquare[i]);
+			newTile.SetTerrainType(map[i].TerrainType, false);
+			allTiles[i] = newTile;
+			tileMap.Add(vancSquare[i], newTile);
+		}
+		RebuildTerrain();
+		RebuildGridAndBrim();
+	} // End of LoadMap().
 
+
+	public void NewMap(TerrainType terrainType, int radius){
+		tileMap.Clear();
+		mapRadius = radius;
+		Vector2Int[] vancSquare = HexMath.GetVancouverSquare(Vector2Int.zero, World.mapRadius);
+		allTiles = new HexTile[vancSquare.Length];
+		for(int i = 0; i < vancSquare.Length; i++){
+			HexTile newTile = new HexTile(vancSquare[i]);
+			newTile.SetTerrainType(terrainType, false);
+			allTiles[i] = newTile;
+			tileMap.Add(vancSquare[i], newTile);
+		}
+		RebuildTerrain();
+		RebuildGridAndBrim();
+	} // End of NewMap() method.
+
+
+	private void RebuildGridAndBrim(){
 		HexMath.GetGrid(physicalGroundGridMesh.mesh, mapRadius, GUIConfig.GridOutlineThickness);
 		virtualGroundGridMesh.mesh = physicalGroundGridMesh.mesh;
 
 		HexMath.GetMapBrim(gridBrimMesh.mesh, mapRadius);
-		
-	} // End of LoadMap().
+	} // End of RebuildGridAndBrim() method.
 
 
 	// Rebuilds the entire terrain.
@@ -212,11 +229,11 @@ public class World : MonoBehaviour {
 
 	private class HexTilePathingData {
 		public HexTile Tile { get; private set; }
-		public bool isOpen = false;
-		public bool isClosed = false;
+		public bool isFrontier = false;
+		public bool isExplored = false;
 		public float gScore = 0f; // Total cost to move along the path up to this cell.
 		public float fScore = 0f;
-		public HexTile parentHex = null; // The tile we came from (in the pathfinding).
+		public HexTile parentTile = null; // The tile we came from (in the pathfinding), used to retrace our steps.
 
 		public HexTilePathingData(HexTile tile){
 			Tile = tile;
@@ -228,6 +245,8 @@ public class World : MonoBehaviour {
 	// TODO: Limit search by maximum number of tiles the unit can move. Only sample the hexes within
 	//   the Vancouver distance to the startTile. Should still be able to go after a goalTile that is
 	//   outside of the possible distance, but it will 'stop short.'
+
+	// If the heuristic always = 0, this is Dijkstra's Algorithm. If heuristic changes, it's A*.
 	public static Vector2Int[] FindPath(HexTile startTile, HexTile goalTile, Unit unit, CancellationToken ct){
 		// Create pathfinding data for all tiles.
 		Dictionary<HexTile, HexTilePathingData> data = new Dictionary<HexTile, HexTilePathingData>();
@@ -235,7 +254,7 @@ public class World : MonoBehaviour {
 			data.Add(tile, new HexTilePathingData(tile));
 	
 		// Seed first tile.
-		data[startTile].isOpen = true;
+		data[startTile].isFrontier = true;
 		bool openHexExists = true;
 		while(openHexExists && !ct.IsCancellationRequested){
 			// Search for node on Open that has best estimate.
@@ -244,7 +263,7 @@ public class World : MonoBehaviour {
 		
 			openHexExists = false;
 			foreach(HexTile tile in allTiles){
-				if(data[tile].isOpen){
+				if(data[tile].isFrontier){
 					openHexExists = true;
 					if(data[tile].fScore < bestFScore){
 						currentTile = tile;
@@ -255,8 +274,8 @@ public class World : MonoBehaviour {
 
 			if(openHexExists){
 				// Move our current node to Closed list
-				data[currentTile].isOpen = false;
-				data[currentTile].isClosed = true;
+				data[currentTile].isFrontier = false;
+				data[currentTile].isExplored = true;
 			
 				// Test all neighboring nodes that can be reached from there
 				HexTile[] adjacentTiles = currentTile.GetAdjacentTiles();
@@ -267,18 +286,22 @@ public class World : MonoBehaviour {
 						//   'optimal' paths, e.g. the 'straightest path' (even if a diagonal path is just as efficient.)
 						//   Make sure the heuristic is much smaller than the value of a whole cell.
 						float heuristic = 0f;
-						if(!data[adjacentTile].isClosed && !data[adjacentTile].isOpen){
-							data[adjacentTile].isOpen = true;
-							data[adjacentTile].parentHex = currentTile;
+
+						// New tile we're attempting to move into?
+						if(!data[adjacentTile].isExplored && !data[adjacentTile].isFrontier){
+							data[adjacentTile].isFrontier = true;
+							data[adjacentTile].parentTile = currentTile;
 						
 							data[adjacentTile].gScore = data[currentTile].gScore + unit.GetMoveCost(adjacentTile);
-							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2);
+							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2) * 0.1f;
 							data[adjacentTile].fScore = data[adjacentTile].gScore + heuristic;
-						}else if(data[adjacentTile].isOpen && (data[adjacentTile].gScore < data[currentTile].gScore)){
-							data[adjacentTile].parentHex = currentTile;
+
+						// Old tile we found a better path to?
+						}else if(data[adjacentTile].isFrontier && (data[adjacentTile].gScore < data[currentTile].gScore)){
+							data[adjacentTile].parentTile = currentTile;
 						
 							data[adjacentTile].gScore = data[currentTile].gScore + unit.GetMoveCost(adjacentTile);
-							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2);
+							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2) * 0.1f;
 							data[adjacentTile].fScore = data[adjacentTile].gScore + heuristic;
 						}
 					}
@@ -290,7 +313,7 @@ public class World : MonoBehaviour {
 					List<Vector2Int> path = new List<Vector2Int>();
 					while(currentTraceHex != startTile){
 						path.Add(currentTraceHex.GridPos2);
-						currentTraceHex = data[currentTraceHex].parentHex;
+						currentTraceHex = data[currentTraceHex].parentTile;
 					}
 					path.Add(startTile.GridPos2);
 
@@ -300,10 +323,87 @@ public class World : MonoBehaviour {
 			}
 		}
 		
-		// Not able to create a path!
-		return null;
+		return null; // Not able to create a path!
 	} // End of FindPath().
 
+
+
+
+
+	// Finds all tiles this unit could move to this turn.
+	public static Vector2Int[] FindValidMoves(HexTile startTile, Unit unit, CancellationToken ct){
+		// Create pathfinding data for all tiles.
+		Dictionary<HexTile, HexTilePathingData> data = new Dictionary<HexTile, HexTilePathingData>();
+		foreach(HexTile tile in allTiles)
+			data.Add(tile, new HexTilePathingData(tile));
+
+		List<HexTile> validTiles = new List<HexTile>();
+	
+		// Seed first tile.
+		data[startTile].isFrontier = true;
+		bool openHexExists = true;
+		while(openHexExists && !ct.IsCancellationRequested){
+			// Search for node on Open that has best estimate.
+			float bestFScore = float.MaxValue;
+			HexTile currentTile = null;
+		
+			openHexExists = false;
+			foreach(HexTile tile in allTiles){
+				if(data[tile].isFrontier){
+					openHexExists = true;
+					if(data[tile].fScore < bestFScore){
+						currentTile = tile;
+						bestFScore = data[tile].fScore;
+					}
+				}
+			}
+
+			if(openHexExists){
+				// Move our current node to Closed list
+				data[currentTile].isFrontier = false;
+				data[currentTile].isExplored = true;
+				validTiles.Add(currentTile);
+			
+				// Test all neighboring nodes that can be reached from there
+				HexTile[] adjacentTiles = currentTile.GetAdjacentTiles();
+				foreach(HexTile adjacentTile in adjacentTiles){
+					// Get neighbors that are navigable.
+					if(adjacentTile.GetIsNavigable(unit.mapLayer, unit)){
+						// The heuristic 'coaxes' the result a certain way. Allows algorithm to choose between multiple
+						//   'optimal' paths, e.g. the 'straightest path' (even if a diagonal path is just as efficient.)
+						//   Make sure the heuristic is much smaller than the value of a whole cell.
+						float heuristic = 0f;
+
+						// New tile we're attempting to move into?
+						if(!data[adjacentTile].isExplored && !data[adjacentTile].isFrontier){
+							data[adjacentTile].gScore = data[currentTile].gScore + unit.GetMoveCost(adjacentTile);
+							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2) * 0.1f;
+							data[adjacentTile].fScore = data[adjacentTile].gScore + heuristic;
+
+							// If we have enough move power to get to this tile, add it to our frontier.
+							if(data[adjacentTile].gScore <= unit.Definition.MovePower){
+								data[adjacentTile].isFrontier = true;
+								data[adjacentTile].parentTile = currentTile;
+							}
+						// Old tile we found a better path to?
+						} else if(data[adjacentTile].isFrontier && (data[adjacentTile].gScore < data[currentTile].gScore)){
+							data[adjacentTile].gScore = data[currentTile].gScore + unit.GetMoveCost(adjacentTile);
+							//heuristic = HexMath.CrowDist(adjacentTile.GridPos2, goalTile.GridPos2) * 0.1f;
+							data[adjacentTile].fScore = data[adjacentTile].gScore + heuristic;
+
+							data[adjacentTile].parentTile = currentTile;
+						}
+					}
+				}
+			}
+		}
+
+		Vector2Int[] returnTiles = new Vector2Int[validTiles.Count];
+		for(int i = 0; i < validTiles.Count; i++)
+			returnTiles[i] = validTiles[i].GridPos2;
+		
+		return returnTiles;
+	} // End of FindValidMoves().
 
 
 

@@ -55,7 +55,7 @@ public class SaveLoadManager : MonoBehaviour {
 
 		// Attempt to load default map
 		if(!LoadGame(PlayerPrefs.GetString(workingFilenamePlayerPref, "")))
-			World.Inst.RebuildTerrain();
+			World.Inst.NewMap(TerrainType.deepWater, 20);
 
 	} // End of ManualStart() method.
 

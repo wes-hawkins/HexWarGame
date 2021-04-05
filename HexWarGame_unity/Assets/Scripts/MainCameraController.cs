@@ -80,6 +80,31 @@ public class MainCameraController : MonoBehaviour, IMouseDraggable {
                 moveThrottle *= 3f;
             targetFocusPosition += ((groundForward * moveThrottle.y) + (-Vector3.Cross(groundForward, Vector3.up).normalized * moveThrottle.x)) * slewRate * Time.deltaTime * zoomDist;
 
+            // Keep focus within map bounds
+            Vector2 hexGridFocusPos = HexMath.WorldToHexGridFractional(targetFocusPosition.ToMap2D());
+            hexGridFocusPos.x = Mathf.Clamp(hexGridFocusPos.x, -World.mapRadius, World.mapRadius);
+            hexGridFocusPos.y = Mathf.Clamp(hexGridFocusPos.y, -World.mapRadius, World.mapRadius);
+
+            // Clamp Z coordinate
+            if((hexGridFocusPos.x + hexGridFocusPos.y) > World.mapRadius){
+                float totalZ = hexGridFocusPos.x + hexGridFocusPos.y;
+                float xFraction = hexGridFocusPos.x / totalZ;
+                float yFraction = hexGridFocusPos.y / totalZ;
+
+                hexGridFocusPos.x = xFraction * World.mapRadius;
+                hexGridFocusPos.y = yFraction * World.mapRadius;
+            } else if((hexGridFocusPos.x + hexGridFocusPos.y) < -World.mapRadius){
+                float totalZ = hexGridFocusPos.x + hexGridFocusPos.y;
+                float xFraction = hexGridFocusPos.x / totalZ;
+                float yFraction = hexGridFocusPos.y / totalZ;
+
+                hexGridFocusPos.x = xFraction * -World.mapRadius;
+                hexGridFocusPos.y = yFraction * -World.mapRadius;
+            }
+
+            targetFocusPosition = HexMath.HexGridToWorld(hexGridFocusPos);
+
+
             // Zoom
             float zoomInput = Input.mouseScrollDelta.y * -zoomRate;
             float zoomDistDelta = Mathf.Clamp(zoomInput * targetZoomDist, minZoomDist - targetZoomDist, maxZoomDist - targetZoomDist);

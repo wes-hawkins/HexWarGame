@@ -6,7 +6,9 @@ using UnityEngine;
 public class UnitDefinition : ScriptableObject {
 
 	[SerializeField] private string unitName = "New Unit"; public string UnitName { get { return unitName; } }
+	[SerializeField] private int movePower = 10; public int MovePower { get { return movePower; } }
 
+	[Space]
 	[Tooltip("Unit can traverse on mountains.")]
 	[SerializeField] private bool canTraverseMountains = false; public bool CanTraverseMountains { get { return canTraverseMountains; } }
 

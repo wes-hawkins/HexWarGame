@@ -73,7 +73,18 @@ public class Unit : MonoBehaviour, IMouseClickable {
 			HexTile lastHoveredTile = null;
 			Vector2Int[] path = new Vector2Int[0];
 			CancellationTokenSource pathCTS;
+
+			// Draw valid move tiles
+			CancellationTokenSource validMoveCTS = new CancellationTokenSource();
+			Vector2Int[] validMoveTiles = World.FindValidMoves(occupiedTile, this, validMoveCTS.Token);
+			InputManager.Inst.ValidMoveTilesFillMesh.gameObject.SetActive(true);
+
+			// Update path logic
 			while(true){
+				// Animate valid moves outline
+				//HexMath.GetTilesOutline(InputManager.Inst.ValidMoveTilesOutlineMesh.mesh, validMoveTiles, 0.1f, 0.15f + (-Mathf.Cos(Time.time * Mathf.PI * 2f)) * 0.05f);
+				HexMath.GetTilesFill(InputManager.Inst.ValidMoveTilesFillMesh.mesh, validMoveTiles, -0.025f + (-Mathf.Cos(Time.time * Mathf.PI * 2f)) * 0.025f, true);
+
 				InputManager.Inst.FindHoveredTile();
 				if((InputManager.Inst.HoveredTile != null) && (InputManager.Inst.HoveredTile != lastHoveredTile)){
 					lastHoveredTile = InputManager.Inst.HoveredTile;
@@ -97,6 +108,7 @@ public class Unit : MonoBehaviour, IMouseClickable {
 					lastHoveredTile.SetOccupyingUnit(this);
 					UpdateHeight();
 					InputManager.Inst.ArrowMesh.gameObject.SetActive(false);
+					InputManager.Inst.ValidMoveTilesFillMesh.gameObject.SetActive(false);
 					return;
 				}
 
@@ -104,6 +116,7 @@ public class Unit : MonoBehaviour, IMouseClickable {
 				if(Input.GetMouseButton(1)){
 					DeselectAll();
 					InputManager.Inst.ArrowMesh.gameObject.SetActive(false);
+					InputManager.Inst.ValidMoveTilesFillMesh.gameObject.SetActive(false);
 					return;
 				}
 
@@ -153,6 +166,11 @@ public class Unit : MonoBehaviour, IMouseClickable {
 
 
 	public float GetMoveCost(HexTile tile){
+		switch(tile.TerrainType){
+			case TerrainType.shallowWater : return 5f;
+			case TerrainType.mountains : return 10f;
+			case TerrainType.deepWater : return 10f;
+		}
 		return 1f;
 	} // End of GetMoveCost() method.
 

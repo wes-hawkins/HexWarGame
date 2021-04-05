@@ -77,6 +77,20 @@ public class HexMath {
 	} // End of VancouverArea() method.
 
 
+	// Returns the radius of a Vancouver Square with the given area. If not valid, returns -1.
+	public static int VancouverAreaToRadius(int area){
+		int testRadius = 0;
+		while (true){
+			int testArea = VancouverArea(testRadius);
+			if(testArea == area)
+				return testRadius;
+			if(testArea > area)
+				return -1;
+			testRadius++;
+		}
+	} // End of VancouverAreaToRadius() method.
+
+
 	// Returns number of tiles in a ring with radius.
 	public static int VancouverCircumference(int radius){
 		return 6 * radius;
@@ -763,8 +777,8 @@ public class HexMath {
 	*/
 
 
-	public static Vector3 HexGridToWorld(Vector2Int pos){
-		return new Vector3(pos.x + (pos.y * 0.5f), 0f, pos.y * 0.86605f);
+	public static Vector3 HexGridToWorld(Vector2 pos){
+		return new Vector3(pos.x + (pos.y * 0.5f), 0f, pos.y * cellHeight);
 	} // End of HexPos().
 
 
@@ -790,6 +804,13 @@ public class HexMath {
 		return new Vector2Int(column, row);
 	} // End of HexPos().
 
+
+	public static Vector2 WorldToHexGridFractional(Vector2 worldPos){
+		float row = worldPos.y / cellHeight;
+		float column = worldPos.x - (row * 0.5f);
+
+		return new Vector2(column, row);
+	} // End of HexPos().
 
 
 	// Tells whether a given point is “left of” or “right of” a given directed line.

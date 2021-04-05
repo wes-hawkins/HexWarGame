@@ -29,6 +29,8 @@ public class InputManager : MonoBehaviour {
 	[SerializeField] private MeshFilter selectedUnitMesh = null;
 
 	[SerializeField] private MeshFilter arrowMesh = null; public MeshFilter ArrowMesh { get { return arrowMesh; } }
+	[SerializeField] private MeshFilter validMoveTilesFillMesh = null; public MeshFilter ValidMoveTilesFillMesh { get { return validMoveTilesFillMesh; } }
+	[SerializeField] private MeshFilter validMoveTilesOutlineMesh = null; public MeshFilter ValidMoveTilesOutlineMesh { get { return validMoveTilesOutlineMesh; } }
 
 	[SerializeField] private TextMeshProUGUI hoveredTileInfo = null;
 
@@ -39,8 +41,13 @@ public class InputManager : MonoBehaviour {
         Inst = this;
 
         arrowMesh.gameObject.SetActive(false);
+
         hoveredCellMesh.gameObject.SetActive(false);
         selectedUnitMesh.gameObject.SetActive(false);
+
+        validMoveTilesFillMesh.gameObject.SetActive(false);
+        validMoveTilesOutlineMesh.gameObject.SetActive(false);
+
     } // End of Start() method.
 
 
@@ -80,7 +87,7 @@ public class InputManager : MonoBehaviour {
                             if(mouseClickable != null)
                                 await mouseClickable.OnClicked(mouseButton);
                             else{
-			                    if((HoveredTile.occupyingUnit != null) && (GameManager.Inst.GameMode == GameMode.play)){
+			                    if((HoveredTile != null) && (HoveredTile.occupyingUnit != null) && (GameManager.Inst.GameMode == GameMode.play)){
 				                    await HoveredTile.occupyingUnit.OnClicked(mouseButton);
 			                    } else {
 				                    selectedUnitMesh.gameObject.SetActive(false);
