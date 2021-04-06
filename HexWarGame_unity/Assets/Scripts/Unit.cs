@@ -1,5 +1,6 @@
 #pragma warning disable CS4014 // Suppress warning about Task.Run() not being awaited... intended to run on separate thread.
 
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Threading;
@@ -21,6 +22,11 @@ public class Unit : MonoBehaviour, IMouseClickable {
 	
 	private Renderer[] renderers;
 
+	public int Hitpoints { get; private set; } = 10;
+	public float MovePower { get; private set; } = 1f;
+
+	public Action<int> HitpointsChanged;
+	public Action<float> MovePowerChanged;
 
 	public static Unit SelectedUnit { get; private set; }
 	public void Select(){ SelectedUnit = this; } // Select a specific unit.
@@ -63,6 +69,8 @@ public class Unit : MonoBehaviour, IMouseClickable {
 		occupiedTile.TerrainTypeUpdated += UpdateHeight;
 		UpdateHeight();
 
+		UnitsManager.Inst.RegisterUnitBadge(this);
+
 	} // End of ManualStart() method.
 
 
@@ -71,19 +79,22 @@ public class Unit : MonoBehaviour, IMouseClickable {
 		// On right click...
 		if(mouseButton == 1){
 			HexTile lastHoveredTile = null;
-			Vector2Int[] path = new Vector2Int[0];
+			HexPath path = null;
 			CancellationTokenSource pathCTS;
 
 			// Draw valid move tiles
 			CancellationTokenSource validMoveCTS = new CancellationTokenSource();
-			Vector2Int[] validMoveTiles = World.FindValidMoves(occupiedTile, this, validMoveCTS.Token);
+
+			Vector2Int[] validMoveTiles = HexNavigation.FindValidMoves(occupiedTile, this, out Vector2Int[] passThroughOnlyTiles, validMoveCTS.Token);
 			InputManager.Inst.ValidMoveTilesFillMesh.gameObject.SetActive(true);
+			InputManager.Inst.PassThroughOnlyTilesMesh.gameObject.SetActive(true);
 
 			// Update path logic
 			while(true){
 				// Animate valid moves outline
 				//HexMath.GetTilesOutline(InputManager.Inst.ValidMoveTilesOutlineMesh.mesh, validMoveTiles, 0.1f, 0.15f + (-Mathf.Cos(Time.time * Mathf.PI * 2f)) * 0.05f);
-				HexMath.GetTilesFill(InputManager.Inst.ValidMoveTilesFillMesh.mesh, validMoveTiles, -0.025f + (-Mathf.Cos(Time.time * Mathf.PI * 2f)) * 0.025f, true);
+				HexMath.GetTilesFill(InputManager.Inst.ValidMoveTilesFillMesh.mesh, validMoveTiles, Mathf.Lerp(0f, -0.1f, GameManager.UIPulsar), true);
+				HexMath.GetTilesFill(InputManager.Inst.PassThroughOnlyTilesMesh.mesh, passThroughOnlyTiles, Mathf.Lerp(-0.3f, -0.2f, GameManager.UIPulsar), false);
 
 				InputManager.Inst.FindHoveredTile();
 				if((InputManager.Inst.HoveredTile != null) && (InputManager.Inst.HoveredTile != lastHoveredTile)){
@@ -97,18 +108,43 @@ public class Unit : MonoBehaviour, IMouseClickable {
 				}
 
 				if(path != null)
-					HexMath.GetTilesArrow(InputManager.Inst.ArrowMesh.mesh, path, 0.35f + (-Mathf.Cos(Time.time * Mathf.PI * 2f)) * 0.025f);
+					HexMath.GetTilesArrow(InputManager.Inst.ArrowMesh.mesh, path.Cells, Mathf.Lerp(0.25f, 0.3f, GameManager.UIPulsar));
 				InputManager.Inst.ArrowMesh.gameObject.SetActive(path != null);
 
 				// TODO: Rewrite this, it's terrible.
 				// Confirm move
 				if(Input.GetMouseButton(0) && (path != null)){
-					occupiedTile.SetOccupyingUnit(null);
-					occupiedTile = lastHoveredTile;
-					lastHoveredTile.SetOccupyingUnit(this);
-					UpdateHeight();
+
 					InputManager.Inst.ArrowMesh.gameObject.SetActive(false);
 					InputManager.Inst.ValidMoveTilesFillMesh.gameObject.SetActive(false);
+					InputManager.Inst.PassThroughOnlyTilesMesh.gameObject.SetActive(false);
+
+					// Step through the move command
+					for(int i = 0; i < (path.Tiles.Length - 1); i++){
+						// Remove from previous tile.
+						occupiedTile.SetOccupyingUnit(null);
+
+						// Move to next
+						float initialMovePower = MovePower;
+						float finalMovePower = MovePower - path.GetStepCost(i);
+						for(float t = 0; t < 1f; t = Mathf.MoveTowards(t, 1f, Time.deltaTime * 3f)){
+							Vector3 position;
+							Quaternion rotation;
+							path.GetStepAnimation(i, t, out position, out rotation);
+
+							transform.position = position;
+							transform.rotation = rotation;
+
+							MovePower = Mathf.Lerp(initialMovePower, finalMovePower, t);
+							MovePowerChanged(MovePower);
+
+							await Task.Yield();
+						}
+
+						occupiedTile = path.Tiles[i + 1];
+						occupiedTile.SetOccupyingUnit(this);
+						UpdateHeight();
+					}
 					return;
 				}
 
@@ -117,6 +153,7 @@ public class Unit : MonoBehaviour, IMouseClickable {
 					DeselectAll();
 					InputManager.Inst.ArrowMesh.gameObject.SetActive(false);
 					InputManager.Inst.ValidMoveTilesFillMesh.gameObject.SetActive(false);
+					InputManager.Inst.PassThroughOnlyTilesMesh.gameObject.SetActive(false);
 					return;
 				}
 
@@ -126,14 +163,17 @@ public class Unit : MonoBehaviour, IMouseClickable {
 	} // End of OnClicked().
 
 
-	private void GeneratePathAsync(HexTile startTile, HexTile endTile, out Vector2Int[] path, CancellationToken ct){
-		path = World.FindPath(startTile, endTile, this, ct);
+	private void GeneratePathAsync(HexTile startTile, HexTile endTile, out HexPath path, CancellationToken ct){
+		path = HexNavigation.FindPath(startTile, endTile, this, ct);
 	} // End of GeneratePathAsync().
 
 
+
+
+
 	private void UpdateHeight(){
-		float height;
-		if(occupiedTile.GetIsNavigable(mapLayer, this, out height)){
+		float height = 0f;
+		if(definition.MoveScheme.GetCanNavigate(occupiedTile.TerrainType)){
 			transform.position = occupiedTile.WorldPos + (Vector3.up * height);
 			SetInvalid(false);
 		} else {
@@ -163,15 +203,5 @@ public class Unit : MonoBehaviour, IMouseClickable {
 		foreach(Renderer renderer in renderers)
 			renderer.material.SetColor("_Recolor", color);
 	} // End of SetRecolor() method.
-
-
-	public float GetMoveCost(HexTile tile){
-		switch(tile.TerrainType){
-			case TerrainType.shallowWater : return 5f;
-			case TerrainType.mountains : return 10f;
-			case TerrainType.deepWater : return 10f;
-		}
-		return 1f;
-	} // End of GetMoveCost() method.
 
 } // End of Unit class.

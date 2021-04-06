@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4fd3faa412e643348a7475d57426a539, type: 3}
   m_Name: GUI Config
   m_EditorClassIdentifier: 
+  insetMargin: 0.35
+  unitBadgeScale: 7
   gridOutlineThickness: 0.035

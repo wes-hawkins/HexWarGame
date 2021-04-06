@@ -17,6 +17,9 @@ public class HexTile {
 
 	public Action TerrainTypeUpdated;
 
+	public static implicit operator bool(HexTile exists){ return exists != null; }
+
+
 	public TerrainType TerrainType { get; private set; }
 	public void SetTerrainType(TerrainType newType, bool updateTerrain){
 		if(TerrainType != newType){
@@ -116,66 +119,6 @@ public class HexTile {
 
 		return alphaMaps;
 	} // End of GetAlphamap() method.
-
-
-	// Returns false if the unit can't occupy the tile.
-	public bool GetIsNavigable(MapLayer mapLayer, Unit unit){
-		return GetIsNavigable(mapLayer, unit, out float dummy);
-	}
-	public bool GetIsNavigable(MapLayer mapLayer, Unit unit, out float height){
-		switch(mapLayer){
-
-			case MapLayer.subnautical:
-				height = TerrainConfig.OceanFloor;
-				return true;
-
-			case MapLayer.surface:
-				switch(TerrainType){
-					case TerrainType.openGrass:
-						if(unit.Definition.CanTraverseOpenGround){
-							height = 0f;
-							return true;
-						}
-						break;
-
-					case TerrainType.mountains:
-						if(unit.Definition.CanTraverseMountains){
-							height = TerrainConfig.MountainUnitHeight;
-							return true;
-						}
-						break;
-
-					case TerrainType.shallowWater:
-						if(unit.Definition.CanFloatShallowSurface){
-							height = TerrainConfig.SeaLevel;
-							return true;
-						} else if(unit.Definition.CanTraverseShallowBed){
-							height = TerrainConfig.ShallowsDepth;
-							return true;
-						}
-						break;
-
-					case TerrainType.deepWater:
-						if(unit.Definition.CanFloatDeepSurface){
-							height = TerrainConfig.SeaLevel;
-							return true;
-						}
-						break;
-				}
-				break;
-
-			case MapLayer.lowAltitude:
-				height = TerrainConfig.LowAltitude;
-				return true;
-
-			case MapLayer.highAlitude:
-				height = TerrainConfig.HighAltitude;
-				return true;
-		}
-
-		height = 0f;
-		return false;
-	} // End of GetUnitHeight().
 
 
 	public SerializableTileInfo GetSerializableTileInfo(){

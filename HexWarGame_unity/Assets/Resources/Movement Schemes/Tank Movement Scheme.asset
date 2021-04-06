@@ -9,8 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de66049fe4604da45955136064f7546e, type: 3}
-  m_Name: Heavy Tank_def
+  m_Script: {fileID: 11500000, guid: 3ec8f393b3f51e34b98c20f9087a0d37, type: 3}
+  m_Name: Tank Movement Scheme
   m_EditorClassIdentifier: 
-  unitName: Heavy Tank
-  moveScheme: {fileID: 11400000, guid: c595c8356752e494e8e4f009b5ee9d37, type: 2}
+  schemeData:
+  - terrain: 2
+    moveCost: 0.25

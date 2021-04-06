@@ -13,6 +13,10 @@ public class GameManager : MonoBehaviour {
 	[SerializeField] private GUIConfig guiConfig;
 	[SerializeField] private TileBlendingMap tileBlendingMap;
 
+	[Space]
+	[SerializeField] private Canvas mainCanvas; public Canvas MainCanvas { get { return mainCanvas; } }
+
+
 	public const int actionsPerTurn = 5;
 
 	public static int playerTurn { get; private set; } = -1;
@@ -24,6 +28,9 @@ public class GameManager : MonoBehaviour {
 
 	public GameMode GameMode { get; private set; } = GameMode.edit;
 	public Action<GameMode> GameModeChanged = null;
+	public bool IsEditor { get { return GameMode == GameMode.edit; } }
+
+	public static float UIPulsar { get { return 0.5f + (0.5f * Mathf.Cos(3f * Time.time * Mathf.PI)); } }
 
 
 	private void Awake(){
@@ -40,6 +47,7 @@ public class GameManager : MonoBehaviour {
 		ScenarioEditor.Inst.ManualStart();
 		SaveLoadManager.Inst.ManualStart();
 
+		UnitsManager.Inst.ManualStart();
 		foreach(Unit unit in Unit.GetAllUnits)
 			unit.ManualStart();
 

@@ -28,10 +28,13 @@ public class InputManager : MonoBehaviour {
 	[SerializeField] private MeshFilter hoveredCellMesh = null;
 	[SerializeField] private MeshFilter selectedUnitMesh = null;
 
+    [Space]
 	[SerializeField] private MeshFilter arrowMesh = null; public MeshFilter ArrowMesh { get { return arrowMesh; } }
 	[SerializeField] private MeshFilter validMoveTilesFillMesh = null; public MeshFilter ValidMoveTilesFillMesh { get { return validMoveTilesFillMesh; } }
+	[SerializeField] private MeshFilter passThroughOnlyTilesMesh = null; public MeshFilter PassThroughOnlyTilesMesh { get { return passThroughOnlyTilesMesh; } }
 	[SerializeField] private MeshFilter validMoveTilesOutlineMesh = null; public MeshFilter ValidMoveTilesOutlineMesh { get { return validMoveTilesOutlineMesh; } }
 
+    [Space]
 	[SerializeField] private TextMeshProUGUI hoveredTileInfo = null;
 
 
@@ -46,6 +49,7 @@ public class InputManager : MonoBehaviour {
         selectedUnitMesh.gameObject.SetActive(false);
 
         validMoveTilesFillMesh.gameObject.SetActive(false);
+        passThroughOnlyTilesMesh.gameObject.SetActive(false);
         validMoveTilesOutlineMesh.gameObject.SetActive(false);
 
     } // End of Start() method.
@@ -138,16 +142,17 @@ public class InputManager : MonoBehaviour {
         if(HoveredTile != null){
     		HexMath.GetTilesFill(hoveredCellMesh.mesh, new Vector2Int[]{ InputManager.Inst.HoveredTile.GridPos2 }, (GUIConfig.GridOutlineThickness * -0.5f));
 
-            hoveredTileInfo.rectTransform.position = Camera.main.WorldToScreenPoint(HexMath.HexGridToWorld(HoveredTile.GridPos2));
-            //hoveredTileInfo.SetText(HoveredTile.GridPos3.x + ", " + HoveredTile.GridPos3.y + ", " + HoveredTile.GridPos3.z);
-            hoveredTileInfo.SetText(HoveredTile.GridPos2.x + ", " + HoveredTile.GridPos2.y);
+            if(GameManager.Inst.IsEditor){
+                hoveredTileInfo.rectTransform.position = Camera.main.WorldToScreenPoint(HexMath.HexGridToWorld(HoveredTile.GridPos2));
+                hoveredTileInfo.SetText(HoveredTile.GridPos2.x + ", " + HoveredTile.GridPos2.y);
+            }
         }
         hoveredCellMesh.gameObject.SetActive(HoveredTile != null);
-        hoveredTileInfo.gameObject.SetActive(HoveredTile != null);
+        hoveredTileInfo.gameObject.SetActive(GameManager.Inst.IsEditor && (HoveredTile != null));
 
 		// Selected unit outline effect
 		if(Unit.SelectedUnit != null)
-			HexMath.GetTilesOutline(selectedUnitMesh.mesh, new Vector2Int[]{ Unit.SelectedUnit.GridPos2 }, 0.15f + (Mathf.Cos(Time.time * Mathf.PI * 2f) * 0.05f), 0.035f);
+			HexMath.GetTilesOutline(selectedUnitMesh.mesh, new Vector2Int[]{ Unit.SelectedUnit.GridPos2 }, Mathf.Lerp(0.1f, 0.2f, GameManager.UIPulsar), 0.035f);
 		selectedUnitMesh.gameObject.SetActive(Unit.SelectedUnit != null);
 
 	} // End of Update().

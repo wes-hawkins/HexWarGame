@@ -179,6 +179,12 @@ public class HexMath {
 	} // End of VertAngle() method.
 
 
+	// Returns angle in degrees from the center in a direction.
+	public static float DirAngle(int dir){
+		return VertAngle(dir) + 30f;
+	} // End of VertAngle() method.
+
+
 	// Returns all the hexes in a vancouver square.
 	public static Vector2Int[] GetVancouverSquare(Vector2Int start, int range){
 		Vector2Int[] potential = new Vector2Int[VancouverArea(range)];
@@ -400,38 +406,20 @@ public class HexMath {
 
 			// First tile (rounded cap)
 			if(t == 0){
-				// Main trunk
+				Vector3 edgeCenter = tileCenter + (vecToNext / 2f);
 				Vector3 leftSegmentVec = GetVertex(dirToNext - 1) * (width / 2f);
-				Vector3 centerLeft = tileCenter + leftSegmentVec;
-				Vector3 centerRight = tileCenter - leftSegmentVec;
-				Vector3 outEdgeLeft = tileCenter + (vecToNext / 2f) + leftSegmentVec;
-				Vector3 outEdgeRight = tileCenter + (vecToNext / 2f) - leftSegmentVec;
-
-				verts.Add(centerLeft); // 0
-				verts.Add(centerRight); // 1
-				verts.Add(outEdgeLeft); // 2
-				verts.Add(outEdgeRight); // 3
-
-				tris.Add(0); tris.Add(2); tris.Add(1);
-				tris.Add(1); tris.Add(2); tris.Add(3);
-
-				// Rounded cap
-				verts.Add(tileCenter); // 4
-
-				// At this point we have 5 verts total.
 				for(int i = 0; i < (endCapSegments + 1); i++){
-					Vector3 thisRadiusPoint = tileCenter + RotateVectorAzimuth(leftSegmentVec, -180f * ((float)i / endCapSegments));
+					Vector3 thisRadiusPoint = edgeCenter + RotateVectorAzimuth(leftSegmentVec, -180f * ((float)i / endCapSegments));
 					verts.Add(thisRadiusPoint); // 5 + i, previous is 4 + i.
 
-					// Skip first point; it just sets up the first point.
+					// Skip first triangle; it just sets up the first point.
 					if(i > 0){
-						tris.Add(4); // Tile center
-						tris.Add(5 + i);
-						tris.Add(4 + i);
+						tris.Add(0); // Tile center
+						tris.Add(2 + i);
+						tris.Add(1 + i);
 					}
 				}
-
-				totalPreviousVerts = 6 + endCapSegments;
+				totalPreviousVerts = 1 + endCapSegments;
 
 			// Last tile (arrow head)
 			} else if(t == (tiles.Length - 1)){
